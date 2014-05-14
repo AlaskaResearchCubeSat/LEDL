@@ -1,0 +1,51 @@
+<!DOCTYPE CrossStudio_Project_File>
+<solution Name="LEDL_TestCode" target="9" version="2">
+  <project Name="LEDL_TestCode">
+    <configuration Name="Common" Platform="MSP430" Target="MSP430F2618" build_use_hardware_multiplier="16-Bit Multiplier" linker_additional_files="$(StudioDir)/ctl/lib/libctl$(LibExt).hza" linker_memory_map_file="$(PackagesDir)/targets/msp430/MSP430F2618.xml" linker_section_placement_file="$(StudioDir)/targets/section_placement_info_abcd_iv32.xml" msp430_debug_interface="JTAG" msp430_identify_string="MSP430F2618" msp430_insn_set="MSP430X" project_directory="" project_type="Executable"/>
+    <folder Name="Source Files">
+      <configuration Name="Common" filter="c;h;s;asm;inc;s43"/>
+      <file file_name="Z:/Software/MorganMSP/LEDL_TestCode/main.c">
+        <configuration Name="Common" c_system_include_directories=""/>
+      </file>
+      <file file_name="MSPtest.c"/>
+      <file file_name="uart.c"/>
+      <file file_name="uart.h"/>
+      <file file_name="UCint.c"/>
+      <file file_name="InilitizeClock.c"/>
+      <file file_name="InilitizeClock.h"/>
+      <file file_name="MSPtest.h"/>
+      <file file_name="OscillatorTest.c"/>
+      <file file_name="OscillatorTest.h"/>
+      <file file_name="Commands.c"/>
+      <file file_name="Commands.h"/>
+      <file file_name="SensorsOnOff.c">
+        <configuration Name="Common" c_system_include_directories="$(StudioDir)/include;$(PackagesDir)/include;Z:/Software/include"/>
+      </file>
+      <file file_name="SensorsOnOff.h"/>
+      <file file_name="timer_setup.c">
+        <configuration Name="Common" c_system_include_directories="$(StudioDir)/include;$(PackagesDir)/include"/>
+      </file>
+      <file file_name="timer_setup.h"/>
+      <file file_name="ADC_setup.c"/>
+      <file file_name="ADC_setup.h"/>
+      <file file_name="log_data.c"/>
+      <file file_name="log_data.h"/>
+      <file file_name="I2C_sensor.c"/>
+      <file file_name="I2C_sensor.h"/>
+      <file file_name="SetUp.c"/>
+      <file file_name="SetUp.h"/>
+      <file file_name="LaunchDetect.c"/>
+      <file file_name="LaunchDetect.h"/>
+    </folder>
+    <folder Name="System Files">
+      <configuration Name="Common" filter="xml"/>
+      <file file_name="$(StudioDir)/ctl/source/threads.js"/>
+    </folder>
+  </project>
+  <configuration Name="MSP430 Debug" Target="MSP430F2618" build_use_hardware_multiplier="16-Bit Multiplier" inherited_configurations="MSP430;Debug" linker_additional_files="Z:/Software/lib/I2Clib_Debug.hza;Z:/Software/libraries/ARClib-LEDL/MSP430 Debug/BUSlib.hza;Z:/Software/lib/termlib_Debug.hza;Z:/Software/lib/SD-lib_UCA1_Debug.hza;Z:/Software/lib/Error_printf_Debug.hza;Z:/Software/lib/commandLib_Debug.hza" linker_memory_map_file="$(PackagesDir)/targets/msp430/MSP430F2618.xml" linker_section_placement_file="$(StudioDir)/targets/section_placement_info_abcd_iv32.xml" msp430_debug_interface="JTAG" msp430_identify_string="MSP430F2618" msp430_insn_set="MSP430X"/>
+  <configuration Name="MSP430" Platform="MSP430" hidden="Yes"/>
+  <configuration Name="Debug" build_debug_information="Yes" hidden="Yes"/>
+  <configuration Name="MSP430 Release" inherited_configurations="MSP430;Release" linker_additional_files="Z:/Software/lib/I2Clib/hza;Z:/Software/libraries/ARClib-LEDL/MSP430 Release/BUSlib.hza;Z:/Software/lib/SD-lib_UCA1_Release.hza;Z:/Software/lib/termlib_Release.hza;Z:/Software/lib/Error_printf_Release.hza;Z:/Software/lib/commandLib_Release.hza"/>
+  <configuration Name="Release" build_debug_information="No" c_preprocessor_definitions="NDEBUG" hidden="Yes" optimize_block_locality="Yes" optimize_copy_propagation="Yes" optimize_cross_calling="Standard" optimize_cross_jumping="Yes" optimize_dead_code="Yes" optimize_jump_chaining="Yes" optimize_jump_threading="Yes" optimize_tail_merging="Yes"/>
+  <configuration Name="Common" Target="MSP430F2618" build_use_hardware_multiplier="16-Bit Multiplier" c_system_include_directories="$(StudioDir)/include;$(PackagesDir)/include;$(StudioDir)/ctl/include/;Z:/Software/libraries/ARClib-LEDL/;Z:/Software/include" link_symbol_definitions="CTL_IRQ_STACK_SIZE=128" link_use_multi_threaded_libraries="Yes" linker_additional_files="$(StudioDir)/ctl/lib/libctl$(LibExt).hza" linker_memory_map_file="$(PackagesDir)/targets/msp430/MSP430F2618.xml" linker_printf_fmt_level="long" linker_section_placement_file="$(StudioDir)/targets/section_placement_info_abcd_iv32.xml" msp430_debug_interface="JTAG" msp430_identify_string="MSP430F2618" msp430_insn_set="MSP430X"/>
+</solution>
