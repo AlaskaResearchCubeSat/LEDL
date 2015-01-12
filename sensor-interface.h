@@ -1,5 +1,5 @@
-#ifndef __SENSOR_INTERFCE_H
-#define __SENSOR_INTERFCE_H
+#ifndef __SENSOR_INTERFACE_H
+#define __SENSOR_INTERFACE_H
 
 
   //Defines for set reset pin

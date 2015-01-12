@@ -1,5 +1,5 @@
-#ifndef __I2C_sensor
-  #define __I2C_sensor 
+#ifndef __I2C_SENSOR_H
+  #define __I2C_SENSOR_H
 
 
 // Defined temperature addresses

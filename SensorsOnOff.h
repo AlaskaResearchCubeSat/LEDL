@@ -1,5 +1,5 @@
-#ifndef __sensors 
-  #define __sensors
+#ifndef __SENSORS_H
+  #define __SENSORS_H
 
  //P7.7 Sensors on/off    //P8.6 ACC on/off    //P8.7 MAG on/off
  void init_timerA(void);

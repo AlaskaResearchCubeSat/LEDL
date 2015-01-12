@@ -1,5 +1,5 @@
-#ifndef __launchdetect
-  #define __launchdetect
+#ifndef __LAUNCHDETECT_H
+  #define ___LAUNCHDETECT_H
 
 #define LaunchDetectflag  0x01
 

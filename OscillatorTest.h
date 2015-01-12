@@ -1,5 +1,5 @@
-#ifndef __OscillatorTest
-  #define __OscillatorTest
+#ifndef __OSCILLATORTEST_H
+  #define __OSCILLATORTEST_H
 
 void OscillatorTest(void);
 

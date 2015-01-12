@@ -1,5 +1,5 @@
-#ifndef __commands
-  #define __commands
+#ifndef __COMMANDS_H
+  #define __COMMANDS_H
 
 void commands(void);
 int logdataCmd(char **argv, unsigned short argc);

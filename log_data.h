@@ -1,5 +1,5 @@
-#ifndef __log_data_launch
-  #define __log_data_launch 
+#ifndef __LOG_DATA_H
+  #define __LOG_DATA_H
   #define TEMP_ARRAY_SIZE       7 //array is 7 16 byte column 
   #define LAUNCH_DATA_SIZE      512
   #define CLYDE_ARRAY_SIZE      20//we are only sampling 20 of the possible clyde sensors 
