@@ -1,6 +1,7 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
+#include "OscillatorTest.h"
 
 void OscillatorTest(void){
 int OscTstFin; //OscTstFin is a variable that will show up when the test is done so the test can move forward 

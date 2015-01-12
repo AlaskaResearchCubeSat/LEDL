@@ -1,5 +1,6 @@
 #include <ctl_api.h>
 #include <msp430.h>
+#include "timerA.h"
 
 //read the timer until the same result is read twice
 //this is so the timer can be read while it is running

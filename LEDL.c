@@ -8,6 +8,7 @@
 #include <Error.h>
 #include "SensorsOnOff.h"
 #include "I2C_sensor.h"
+#include "LEDL.h"
 
   typedef struct{
       long SDaddress; 

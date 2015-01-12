@@ -16,6 +16,7 @@
 #include "sensor-interface.h"
 #include "Z:\Software\ADCS\ACDS-flight\SensorDataInterface.h"
 #include "LaunchDetect.h"
+#include "Commands.h"
 
 
 

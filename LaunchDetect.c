@@ -6,6 +6,7 @@
 #include "ADC_setup.h"
 #include <math.h>
 #include "log_data.h"
+#include "LaunchDetect.h"
 
 
 

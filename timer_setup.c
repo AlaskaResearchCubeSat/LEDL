@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <ctl.h>
 #include "sensor-interface.h"
+#include "timer_setup.h"
 
 
 void timersetup(void){
