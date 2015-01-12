@@ -10,30 +10,6 @@
 #include "I2C_sensor.h"
 #include "LEDL.h"
 
-  typedef struct{
-      long SDaddress; 
-      //unsigned int gyro_data[GYRO_ARRAY_SIZE];
-      char temp_data[TEMP_ARRAY_SIZE];
-      char clyde_ttc;
-      int clyde_array_two_int[2];
-      char clyde_array_two_char[2];
-  }LEDL_STAT;
-
-  
-  typedef struct {
-  int clyde_array_fifteen[15];
-  }CLYDE_STAT;
-  
-  extern int clyde_data[CLYDE_ARRAY_SIZE];
-  extern int temp_measure[TEMP_ARRAY_SIZE];
-  
-  
-
-  extern arr;
-  extern switch_is_on;
-  extern mmcReturnValue;
-
-
   void CLYDE_STAT_LED_toggle(void){
   P4OUT^=BIT3;
   }
