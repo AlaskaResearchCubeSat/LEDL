@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctl.h>
-#include "ARCbus.h"
+#include <ARCbus.h>
 #include "ADC_setup.h"
 #include <math.h>
 #include "log_data.h"

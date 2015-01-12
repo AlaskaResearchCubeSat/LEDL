@@ -1,7 +1,7 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
-#include "ARCbus.h"
+#include <ARCbus.h>
 #include <terminal.h>
 #include "log_data.h"
 #include <SDlib.h>

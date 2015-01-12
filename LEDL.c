@@ -5,7 +5,7 @@
 #include <ARCbus.h>
 #include "log_data.h"
 #include <SDlib.h>
-#include "error.h"
+#include <Error.h>
 #include "SensorsOnOff.h"
 #include "I2C_sensor.h"
 

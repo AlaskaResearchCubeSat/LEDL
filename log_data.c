@@ -10,7 +10,7 @@
 #include <SDlib.h>
 #include "SensorsOnOff.h"
 #include "sensor-interface.h"
-#include "crc.h"
+#include <crc.h>
 
 
 /*

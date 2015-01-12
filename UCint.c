@@ -1,5 +1,5 @@
 #include <msp430.h>
-#include "i2c.h"
+#include <i2c.h>
 
 //I2C structure for data passing
 I2C_STAT I2C_stat;

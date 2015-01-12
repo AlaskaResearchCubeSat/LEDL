@@ -1,7 +1,7 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
-#include "ctl.h"
+#include <ctl.h>
 #include "sensor-interface.h"
 
 
