@@ -11,15 +11,17 @@
   #define CLYDE_PACKETSIZE_FOR_CDH  15//this is specified by becon each spot is 16 bits 
   #define LEDL_PACKETSIZE_FOR_ACDS  9//each packet has 6 mag and 3 gyro measurements
  
-  #define SDcardwriteflag1      0x01
-  #define SDcardwriteflag2      0x02 
-  #define get_I2C_data_flag     0x01
-  #define get_mag_data_flag     0x01
-  #define get_clyde_data_flag   0x01
+  #define SD_EV_WRITE_1         0x01
+  #define SD_EV_WRITE_2         0x02 
+  #define SD_EV_DIE             0x04
+  #define SD_EV_FINISHED        0x08
+  
+  #define SD_EV_ALL             (SD_EV_WRITE_1|SD_EV_WRITE_2|SD_EV_DIE|SD_EV_FINISHED)
+  
+  #define I2C_EV_GET_DATA       0x01
+  #define CLYDE_EV_GET_DATA     0x01
   #define LaunchData_flag       0x01
   #define OrbitData_flag        0x01
-  #define SDcardDieflag         0x04
-  #define SDcardfinishedflag    0x08
 
   extern CTL_EVENT_SET_t handle_adc;
   extern CTL_EVENT_SET_t handle_SDcard;

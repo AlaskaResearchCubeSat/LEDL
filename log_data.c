@@ -257,7 +257,7 @@ extern int switch_is_on;
                               }//closes if (frame_100==100)
                               else if (frame_100==0)
                               {
-                              ctl_events_set_clear(&handle_get_I2C_data,get_I2C_data_flag,0);  
+                              ctl_events_set_clear(&handle_get_I2C_data,I2C_EV_GET_DATA,0);  
                               data++;
                               }//closes else if (frame_100==0)
                               else
@@ -380,13 +380,13 @@ extern int switch_is_on;
                               data=0;
                               if (launch_data==launch_data1)
                               {
-                              ctl_events_set_clear(&handle_SDcard,SDcardwriteflag1,0);
+                              ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_1,0);
                               launch_data=launch_data2;
                               }//closes if(launch_data==launch_data1)
                               else 
                               {
                               launch_data=launch_data1;
-                              ctl_events_set_clear(&handle_SDcard,SDcardwriteflag2,0);  
+                              ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_2,0);  
                               }//closes else                         
                               temp_display=0;
                              break; 
@@ -405,8 +405,8 @@ extern int switch_is_on;
        frame=0;
        ACCoff();
        GyroSleep();
-       ctl_events_set_clear(&handle_SDcard,SDcardDieflag,0);//this sends the flag to allow for the SD card to shut down 
-       ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SDcardfinishedflag,CTL_TIMEOUT_NONE,0);//this waits for SD card to finish writing the last block so that it can shutdown 
+       ctl_events_set_clear(&handle_SDcard,SD_EV_DIE,0);//this sends the flag to allow for the SD card to shut down 
+       ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_FINISHED,CTL_TIMEOUT_NONE,0);//this waits for SD card to finish writing the last block so that it can shutdown 
        mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
        SENSORSoff();
        BUS_free_buffer();
@@ -429,8 +429,8 @@ void writedatatoSDcard(void)
   int result;
   
   for(;;){//I may want to add code that looks for a new spot to put data if there is data in code(SD card code). 
-      SD_card_write=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,7,CTL_TIMEOUT_NONE,0);//the 7 means your looking at all 3 flags 
-         if(SD_card_write&(SDcardwriteflag1))
+      SD_card_write=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_ALL,CTL_TIMEOUT_NONE,0);//the 7 means your looking at all 3 flags 
+         if(SD_card_write&(SD_EV_WRITE_1))
            {  //SD_card_write_time=get_ticker_time();  
              // printf("SD card write start %u\t",get_ticker_time());
               result = mmcWriteBlock(SDaddr,(unsigned char*) launch_data1); //(unsigned char*) casting my pointer(array) as a char 
@@ -445,7 +445,7 @@ void writedatatoSDcard(void)
               countforLED=0;
               }
               }
-      if(SD_card_write&(SDcardwriteflag2))
+      if(SD_card_write&(SD_EV_WRITE_2))
            {
               result= mmcWriteBlock(SDaddr,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char 
               SDaddr+=1;//memory card is block address
@@ -457,13 +457,13 @@ void writedatatoSDcard(void)
               countforLED=0;
               }
             }
-      if(SD_card_write&(SDcardDieflag))
+      if(SD_card_write&(SD_EV_DIE))
          {
          int SDaddr_for_total_blocks_used=0;
          launch_data2[0]=SDaddr;
          SD_LED_OFF();
          result= mmcWriteBlock(SDaddr_for_total_blocks_used,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char   
-         ctl_events_set_clear(&handle_SDcard,SDcardfinishedflag,0);//this is to tell that the SD card is finished writing and can be shut down if necessary 
+         ctl_events_set_clear(&handle_SDcard,SD_EV_FINISHED,0);//this is to tell that the SD card is finished writing and can be shut down if necessary 
         //  printf("SD card shutdown \r\n");
          return;
          }
@@ -476,8 +476,8 @@ int k=0;
 int l=0;
 unsigned get_I2C_data;
 for(;;){//take temperature data 
-        get_I2C_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_I2C_data,get_I2C_data_flag,CTL_TIMEOUT_NONE,0);
-        if (get_I2C_data&(get_I2C_data_flag))
+        get_I2C_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_I2C_data,I2C_EV_GET_DATA,CTL_TIMEOUT_NONE,0);
+        if (get_I2C_data&(I2C_EV_GET_DATA))
         {
         Temp_I2C_sensor(temp_measure);
 
@@ -491,8 +491,8 @@ void takeclydedata(void)
 {
 unsigned get_clyde_data;
 for(;;){//take eps data 
-        get_clyde_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_clyde_data,get_clyde_data_flag,CTL_TIMEOUT_NONE,0);
-        if (get_clyde_data&(get_clyde_data_flag))
+        get_clyde_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_clyde_data,CLYDE_EV_GET_DATA,CTL_TIMEOUT_NONE,0);
+        if (get_clyde_data&(CLYDE_EV_GET_DATA))
         {
         printf("made it to clyde command");
         clyde_take_data(clyde_data);
