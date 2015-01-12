@@ -7,8 +7,6 @@
       <file file_name="main.c"/>
       <file file_name="MSPtest.c"/>
       <file file_name="UCint.c"/>
-      <file file_name="InilitizeClock.c"/>
-      <file file_name="InilitizeClock.h"/>
       <file file_name="MSPtest.h"/>
       <file file_name="OscillatorTest.c"/>
       <file file_name="OscillatorTest.h"/>
