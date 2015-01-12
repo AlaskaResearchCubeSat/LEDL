@@ -25,6 +25,8 @@ void RESET_LED(void);
 void SD_LED_OFF(void);
 void LEDL_SWITCH_TO_EPS(void);
 void LEDL_BLOW_FUSE(void);
+void GyroSleep(void);
+void GyroWakeUp(void);
 
 
  #endif
