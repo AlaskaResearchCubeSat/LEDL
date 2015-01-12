@@ -6,7 +6,7 @@
 #include "log_data.h"
 #include <SDlib.h>
 #include "error.h"
-#incldue "SensorsOnOff.h"
+#include "SensorsOnOff.h"
 #include "I2C_sensor.h"
 
   typedef struct{
