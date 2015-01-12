@@ -10,18 +10,90 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <commandLib.h>
+#include <I2C.h>
+#include "I2C_sensor.h"
+#include <ctl.h>
+#include "SensorsOnOff.h"
+#include "UCA1_uart.h"
+#include <UART_queue.h>
+#include "sensor-interface.h"
+#include "Z:\Software\ADCS\ACDS-flight\SensorDataInterface.h"
+#include "LaunchDetect.h"
+
+
+
+
+
+
+
 
 //this code is a receptacle for getting commands from the user. 
 void commands(void);
 
 int SUB_parseCmd(unsigned char src,unsigned char cmd, unsigned char *dat, unsigned short len){
-return ERR_UNKNOWN_CMD;
+int i;
+  unsigned short time,count;
+  switch(cmd){
+    case CMD_MAG_SAMPLE_CONFIG:
+      //check command
+      switch(*dat){
+        case MAG_SAMPLE_START:
+          if(len!=4){
+            return ERR_PK_LEN;
+          }
+          //get time parameter
+          time=dat[1]<<8;
+          time|=((unsigned short)dat[2]);
+          count=dat[3];
+          //run sensor collection
+          run_sensors(time,count);
+          //success!
+          return RET_SUCCESS;
+        case MAG_SAMPLE_STOP:
+          //check packet length
+          if(len!=1){
+            //incorrect length
+            return ERR_PK_LEN;
+          }
+          //stop sensors
+          stop_sensors();
+          //success!
+          return RET_SUCCESS;
+        case MAG_SINGLE_SAMPLE:
+          //check packet length
+          if(len!=1){
+            //incorrect length
+            return ERR_PK_LEN;
+          }
+          sensors_single_sample();
+          //success!
+          return RET_SUCCESS;
+        case MAG_TEST_MODE_ON:
+          //check packet length
+          if(len!=1){
+            //incorrect length
+            return ERR_PK_LEN;
+          }
+          mag_tx_addr=BUS_ADDR_CDH;
+          return RET_SUCCESS;  
+        case MAG_TEST_MODE_OFF:
+          //check packet length
+          if(len!=1){
+            //incorrect length
+            return ERR_PK_LEN;
+          }
+          mag_tx_addr=BUS_ADDR_ACDS;
+          return RET_SUCCESS;
+      }
+  }
+  //Return Error
+  return ERR_UNKNOWN_CMD;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 int logdataCmd(char **argv, unsigned short argc){
  
-   launch_data_log();
+  // launch_data_log();//comment this out when using as a task and I am not calling it as a function 
    }
 //////////////////////////////////////////////////////////////////////////////////////////
 //define printf formats
@@ -338,7 +410,7 @@ int printCmd(char **argv, unsigned short argc){//copied print mmcdump command to
   //print out buffer
   for(i=0;i<256/26;i++){//changed the 512 to 256 which is a result of changing CHAR TO INT
 
-  if(i<7){
+  if(i<8){
     printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR "\r\n",
     buffer[i*26],buffer[i*26+1],buffer[i*26+2],buffer[i*26+3],buffer[i*26+4],buffer[i*26+5],buffer[i*26+6],buffer[i*26+7],buffer[i*26+8],buffer[i*26+9],buffer[i*26+10],
     buffer[i*26+11],buffer[i*26+12],buffer[i*26+13],buffer[i*26+14],buffer[i*26+15],buffer[i*26+16],buffer[i*26+17],buffer[i*26+18],buffer[i*26+19],buffer[i*26+20],
@@ -346,10 +418,10 @@ int printCmd(char **argv, unsigned short argc){//copied print mmcdump command to
     }
 
   else{
-    printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR UNSIGNED_STR "\r\n",
+    printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR UNSIGNED_STR UNSIGNED_STR "\r\n",
     buffer[i*26],buffer[i*26+1],buffer[i*26+2],buffer[i*26+3],buffer[i*26+4],buffer[i*26+5],buffer[i*26+6],buffer[i*26+7],buffer[i*26+8],buffer[i*26+9],buffer[i*26+10],
     buffer[i*26+11],buffer[i*26+12],buffer[i*26+13],buffer[i*26+14],buffer[i*26+15],buffer[i*26+16],buffer[i*26+17],buffer[i*26+18],buffer[i*26+19],buffer[i*26+20],
-    buffer[i*26+21],buffer[i*26+22],buffer[i*26+23],buffer[i*26+24],buffer[i*26+25]);
+    buffer[i*26+21],buffer[i*26+22],buffer[i*26+23],buffer[i*26+24],buffer[i*26+25],buffer[i*26+26]);
     }
    ctl_timeout_wait(ctl_get_current_time()+10); 
   }
@@ -479,11 +551,12 @@ int printmultiCmd(char **argv, unsigned short argc){//copied print mmcdump comma
     }
 
   else{
-    printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR UNSIGNED_STR "\r\n",
+    printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR UNSIGNED_STR UNSIGNED_STR"\r\n",
     buffer[i*26+j*256],buffer[i*26+j*256+1],buffer[i*26+j*256+2],buffer[i*26+j*256+3],buffer[i*26+j*256+4],buffer[i*26+j*256+5],buffer[i*26+j*256+6],buffer[i*26+j*256+7],buffer[i*26+j*256+8],buffer[i*26+j*256+9],buffer[i*26+j*256+10],
     buffer[i*26+j*256+11],buffer[i*26+j*256+12],buffer[i*26+j*256+13],buffer[i*26+j*256+14],buffer[i*26+j*256+15],buffer[i*26+j*256+16],buffer[i*26+j*256+17],buffer[i*26+j*256+18],buffer[i*26+j*256+19],buffer[i*26+j*256+20],
-    buffer[i*26+j*256+21],buffer[i*26+j*256+22],buffer[i*26+j*256+23],buffer[i*26+j*256+24],buffer[i*26+j*256+25]);
+    buffer[i*26+j*256+21],buffer[i*26+j*256+22],buffer[i*26+j*256+23],buffer[i*26+j*256+24],buffer[i*26+j*256+25],buffer[i*26+j*256+26]);
     }
+    
    ctl_timeout_wait(ctl_get_current_time()+10); 
   }
   }
@@ -504,6 +577,13 @@ if (SDaddr==0)
 {printf("sucess memory starting at Zero");}
 ctl_timeout_wait(ctl_get_current_time()+10); 
 } 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//return memory card address to be read 
+extern int SDaddr;
+int mmc_address_Cmd(char **argv, unsigned short argc){
+{printf("Memory is at %d",SDaddr);}
+ctl_timeout_wait(ctl_get_current_time()+10); 
+} 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 int testlaunchCmd(char **argv, unsigned short argc){
@@ -512,7 +592,202 @@ int testlaunchCmd(char **argv, unsigned short argc){
    }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+int turnonsdcardCmd(char **argv, unsigned short argc){
+          int mmcReturnValue;
+          VREGon();//turn on voltage regulator in case the voltage on batteries drop, SD card can operate at 2.7 V, but the batteries will not stay there long
+          ctl_timeout_wait(ctl_get_current_time()+5);//4.88 MS give time for voltage to stabalize 
+          SENSORSon();//turn on sensors 
+          //initalize the SD card 
+          ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
+          initCLK();//SD card expects the 16 MHz clock 
+          mmcInit_msp();
+          mmcReturnValue=mmcInit_card();
+          if (mmcReturnValue==MMC_SUCCESS){
+          printf("\rCard initalized Sucessfully\r\n");
+          }
+          else {
+          printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
+          }
 
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
+int turnoffsdcardCmd(char **argv, unsigned short argc){
+       mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+       SENSORSoff();
+       initCLK_lv();//Reduce clock speed for low voltage application
+       ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
+       VREGoff();//turn Voltage regulator off for low power application
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
+ //EPS telemetry
+  int battempcmd(char **argv,unsigned short arg){
+  
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+const struct{
+  float scale,offset;
+  const char *name,*units;
+} clyde_tbl[32]={
+//New Clyde Conversions
+/*
+{1,0,"GND",""},
+{-.5,515.7,"Array +Y Current","mA"},
+{-.163,110.338,"Array +Y Temperature","\xF8""C"},
+{-.0086,8.81,"Array +y Temperature","V"},
+{-.5,515.7,"Array pair Y voltage","mA"},
+{-.163,110.338,"Array -X temperature","\xF8""C"},
+{-.0086,8.81,"Array pair X voltage","V"},
+{-.5,515.7,"Array +X current","mA"},
+{-.163,110.338,"Array +x temperature","\xF8""C"},
+{-.0086,8.81,"Array pair Z voltage","V"},
+{-.5,515.7,"Array +Z current","mA"},
+{-.163,110.338,"Array +z temprature","\xF8""C"},
+{1,0,"GND",""},
+{-.5,515.7,"Array -Y current","mA"},
+{-.163,110.338,"Array -Y temperature","\xF8""C"},
+{1,0,"GND",""},
+{1,0,"GND",""},
+{-3.153,3250.815,"Battery Bus Current","mA"},
+{-.163,110.835,"BAT1 Temperature","\xF8""C"},
+{-.0939,9.791,"BAT1 Full Voltage","V"},
+{1,0,"GND",""},
+{1,0,"BAT1 Current Direction","Chg/Dis NEEDS SCALE FACTORS"},
+{-3.2,2926.22,"BAT1 Current","mA"},
+{-.163,110.835,"BAT0 Temperature","\xF8""C"},
+{-.0939,9.791,"BAT0 Full Voltage","V"},
+{1,0,"GND",""},
+{-3.5,3611.509,"5V Bus Current","mA"},
+{-4.039,4155.271,"3.3V Bus Current","mA"},
+{1,0,"BAT0 Current Direction","Chg/Dis NEEDS SCALE FACROTS"},
+{-3.2,2926.22,"BAT0 Currnet Direction","mA"},
+{-.163,110.338,"Array -Z Temperature","\xF8""C"},
+{-.5,515.7,"Array -Z Current","mA",},
+*/
+//Old Clyde Conversions
+{-.009,8.073,"Panel Y1 Voltage","V"},
+{-.486,502.524,"Panel Y1 Current","mA"},
+{-.1619,110.119,"Panel Y1 Temperature","\xF8""C"},
+{-.009,8.703,"Panel X2 voltage","V"},
+{-.486,502.524,"Panel X2 current","mA"},
+{-.1619,110.119,"Panel X2 temperature","\xF8""C"},
+{-.009,8.703,"Panel X1 Voltage","V"},
+{-.486,502.524,"Panel X1 current","mA"},
+{-.1619,110.119,"Panel X1 temperature","\xF8""C"},
+{-.009,8.703,"Panel Z1 Voltage","V"},
+{-.486,502.524,"Panel Z1 current","mA"},
+{-.1619,110.119,"Panel Z1 temperature","\xF8""C"},
+{-.009,8.703,"Panel Y2 Voltage","V"},
+{-.486,502.524,"Panel Y2 Current","mA"},
+{-.1619,110.119,"Panel Y2 Temperature","\xF8""C"},
+{-.009,8.703,"Panel Z2 Voltage","V"},
+{1,0,"GND",""},
+{-2.13551,2422.004,"Battery Bus Current","mA"},//17
+{-.163,110.7,"BAT2 Temperature","\xF8""C"},
+{-.00939,9.791,"BAT2 Voltage","V"},
+{-.00438,4.753,"CELL2 Voltage","V"},
+{1,0,"BAT2 Current Direction","Chg/Dis NEEDS SCALE FACROTS"},
+{-3.2,2926.22,"BAT2 Current","mA"},
+{-.163,110.7,"BAT1 Temperature","\xF8""C"},
+{-.00939,9.791,"BAT1 Voltage","V"},//24
+{-.00438,4.753,"CELL1 Voltage","V"},//25
+{-1.2009,1239.284,"5V Bus Current","mA"},//26
+{-1.3009,1334.687,"3.3V Bus Current","mA"},//27
+{1,0,"BAT1 Current Direction","Chg/Dis NEEDS SCALE FACROTS"},
+{-3.2,2926.22,"BAT1 Current","mA"},
+{-.1619,110.119,"Panel Z1 temperature","\xF8""C"},
+{-.486,502.524,"Panel Z1 current","mA"},
+};
+
+
+
+//read write cmd for CLYDE
+int clydecmd(char **argv,unsigned short argc){
+int res,i,found=0;
+unsigned char tx[2]={0x00,19}, rx[2];
+unsigned short rez;
+//TURN ON I2C LINE FOR CLYDE 
+P7DIR |= BIT4;
+P7OUT |= BIT4;
+//Set
+
+ctl_timeout_wait(ctl_get_current_time()+3);
+// check num of arguments  
+if (argc!=1){
+  printf("Enter an ADC address from 1 to 31 \r\n");
+  return 1;
+}
+// convert **argv string to int
+tx[1]=atoi(argv[1]);
+// check to make sure ADC addressing value is btwn 0 and 31
+if(tx[1]>31){
+printf("Error enterd channel value was %d\r\n Enter an ADC address from 0 to 31.\r\n",tx[1]);
+return 2;}
+
+printf("sent cmd \r\n");
+//send cmd\
+
+res=i2c_tx(0x01,tx,2);
+//error msg or success
+printf("%s\r\n",I2C_error_str(res));
+//wait 1.2 ms (300)
+ctl_timeout_wait(ctl_get_current_time()+5);
+//read cmd
+res=i2c_rx(0x01,rx,2);
+//error msg or success
+printf("%s\r\n",I2C_error_str(res));
+rez=rx[1];
+rez|=rx[0]<<8;
+rez&=0x3FF;
+printf("rez = %i\r\n",rez);
+// ADC channel signal conversion equations
+printf("%s = %f %s\r\n",clyde_tbl[tx[1]].name,clyde_tbl[tx[1]].scale*rez+clyde_tbl[tx[1]].offset,clyde_tbl[tx[1]].units);
+//turn LED off
+ctl_timeout_wait(ctl_get_current_time()+3);
+
+//TURN OFF I2C LINE FOR CLYDE 
+P7OUT&=~BIT4;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+int pdmcmd(char **argv,unsigned short argc){
+unsigned char tx[2]={0x02,BIT2};
+int res;
+
+//send cmd
+res=i2c_tx(0x01,tx,2);  
+printf("PDM reset \r\n");
+// LED off
+
+}
+int versioncmd(char **argv,unsigned short argc){
+unsigned char tx[2]={0x02,BIT2},rx[2];
+int res;
+
+//send cmd
+res=i2c_tx(0x01,tx,2);
+//wait a bit
+ctl_timeout_wait(ctl_get_current_time()+3);
+//read cmd
+res=i2c_rx(0x01,rx,2);
+//convert string to int
+//res=atoi(argv[1]);
+printf("version number is %d\n\r",res);
+
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+int tempcmd(char **argv,unsigned short argc){
+int temp_measure[7];
+
+
+
+Temp_I2C_sensor(temp_measure);
+ctl_timeout_wait(ctl_get_current_time()+2000);
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 //created table for help commands
 //table of commands with help
@@ -522,8 +797,16 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                           {"printmulti"," [command]\r\n\t""start to log data",printmultiCmd}, 
                           {"printgyro"," [command]\r\n\t""start to log data",printGyroCmd},
                           {"mmczero"," [command]\r\n\t""return memeory card to address zero",mmc_address_zeroCmd},
+                          {"mmcaddr"," [command]\r\n\t""return memeory card to address zero",mmc_address_Cmd},
                           {"testlaunch","[command]\r\n\t""check to see if interrupt works",testlaunchCmd},
-                          MMC_COMMANDS,CTL_COMMANDS,
+                          {"SDon","[command]\r\n\t""Turn on SD card",turnonsdcardCmd},
+                          {"SDoff","[command]\r\n\t""Turn on SD card",turnoffsdcardCmd},
+                          {"battemp","addr num [data0]\r\n\t gets CLYDE battery temperature.",battempcmd},
+                          {"clyde","channel \r\n\t""gets data from Clyde ADC channels.\n\r\t",clydecmd},
+                          {"pdm","Hard reset switches power busses off.\r\n\t",pdmcmd},
+                          {"version","provieds firmware version number of the CLYDE board\n\r\t",versioncmd},
+                          {"temp","provides temperature measurement\n\r\t",tempcmd},
+                          MMC_COMMANDS,CTL_COMMANDS,I2C_COMMANDS,
                          //end of list
                          {NULL,NULL,NULL}};
 

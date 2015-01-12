@@ -13,51 +13,86 @@
 
 //set up the event that will cause the MSP to switch 
 CTL_EVENT_SET_t handle_LaunchDetect;
+CTL_EVENT_SET_t handle_LaunchData;
+CTL_EVENT_SET_t handle_OrbitData;
+
+int switch_is_on=0;
+int orbit_switch_is_on=0;
 
 void setup_launch_detect(void){
- ctl_events_init(&handle_LaunchDetect, 0);
-
- P2DIR &= ~BIT7;//TURNS ONLY P2.7 OFF (signal is applied to a PMOS gate, being low makes it active, providing voltage to sensors)
- P2IES &= ~BIT7;//sets up interrupt to be rising edge
- P2IFG &= ~BIT7;//you clear the flag before the interrupt is set
- P2IE |= BIT7;//sets up interrupt 
+  //ctl_events_init(&handle_LaunchDetect, 0);//this is when we use the launchDetect Algorithim 
+  ctl_events_init(&handle_LaunchData, 0);//this is for use with EMI testing, for actual satellite mission this will be set after the verification of there being a positive launch 
+ //this is here for testing until i can figure out what is going on with Port 1 interrupt
+ ctl_events_init(&handle_OrbitData, 0);//this is for use when satellite makes it to orbit-
+ P2DIR &= ~(BIT7|BIT6);//TURNS ONLY P2.7 and P2.6 as an input
+ P2IES |=  BIT7;//sets up interrupt to be a high to low transition
+ P2IES &= ~BIT6;// sets up interrupt to be a low to high transition
+ P2IFG &= ~(BIT7|BIT6);//you clear the flag before the interrupt is set
+ P2IE  |= BIT7|BIT6;//sets up interrupt 
  
 }
-
+/*
+void setup_orbit_start(void){
+  //ctl_events_init(&handle_LaunchDetect, 0);//this is when we use the launchDetect Algorithim 
+  ctl_events_init(&handle_OrbitData, 0);//this is for use when satellite makes it to orbit 
+ 
+ P1DIR &= ~(BIT0);//TURNS ONLY P1.0 as an input
+ P1IES &= ~BIT0;// sets up interrupt to be a low to high transition
+ P1IFG &= ~(BIT0);//you clear the flag before the interrupt is set
+ P1IE  |= BIT0;//sets up interrupt 
+ 
+}
+*/
 void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt function the _interrupt tells its a function interrupt 
 //placed in code that sets the flag
+
   if (P2IFG&BIT7){
-  P2IFG=0;
-  ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);
-  }
-  else if (P2IFG&BIT6){
-  P2IFG=0;
-  printf("Port 2.6 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
-  }
+
+                  P2IFG &= ~BIT7;
+                  switch_is_on=1;
+                  //ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
+                  ctl_events_set_clear(&handle_LaunchData,LaunchData_flag,0);//this should start the data logging 
+                
+                  }
+
+  else if (P2IFG&BIT6){//this interrupt is used for testing purposes.
+   //the stitch used is a push button switch. The switch is depressed and the interrupt input is connected to vcc momentarlly causing an interrupt. 
+                       
+                       //turn off the flag 
+                       P2IFG &= ~BIT6;
+                       //switch has just been selected, switch_is_on is checked for initial conditions and enters this code to begin taking data. 
+                       if (switch_is_on==0)
+                       {
+                        //switch_is_on is a state for the launch_data_log 
+                        switch_is_on=1; 
+                        ctl_events_set_clear(&handle_LaunchData,LaunchData_flag,0);//this should start the data logging 
+                         
+                       }
+                     else 
+                      { 
+                        switch_is_on=0;//turn off, so code will exit out of launch_data_log()
+                        
+                      }
+
+        }
   else if (P2IFG&BIT5){
   P2IFG=0;
-  printf("Port 2.5 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
   }
   else if (P2IFG&BIT4){
   P2IFG=0;
-  printf("Port 2.4 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
   }
   else if (P2IFG&BIT3){
   P2IFG=0;
-  printf("Port 2.3 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
   }
   else if (P2IFG&BIT2){
   P2IFG=0;
-  printf("Port 2.2 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
-  }
+   }
   else if (P2IFG&BIT1){
   P2IFG=0;
-  printf("Port 2.1 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
   }
   else  {
   P2IFG=0;
-  printf("Port 2.0 Flag was set");// this interrupts are not being used for anything. in case one of the interrupts gets set then system will not loop
-  }
+   }
  
 }
 //Code will verify if there is a launch 
@@ -94,8 +129,7 @@ adcsetup();
                 //data is represented as a number from 0 to 4096 ( 0 V to 3.3 V), 0.0008057; volts per adc reference 0 to 4096
                 //a voltage conversion for the accelerometers
                 //   ADXL321 18 g accelerometer   57.0 mV per g 
-                //   ADXL001 70 g accelerometer   24.2 mV per g
-
+                //   ADXL001 70 g accelerometer   16 mV per g
                 checkacc[i]*=adcconversion;
                 checkacc[i]-=1.65;
                 checkacc[i]=fabsf(checkacc[i]);
@@ -120,19 +154,19 @@ adcsetup();
                   }}
                   if (i==3) //ADXL001 are located at MEM3-MEM4
                   {
-                  if (checkacc[3]  > 0.0242){
+                  if (checkacc[3]  > 0.016){
                  /// P7OUT |= BIT3;
                   //P7DIR |= BIT3;
                   }}
                   if (i==4) //ADXL001 are located at MEM3-MEM4
                   {
-                  if(checkacc[4]  > 0.0242){
+                  if(checkacc[4]  > 0.016){
                  // P7OUT |= BIT4;
                  // P7DIR |= BIT4;
                   }}
                   if (i==5) //ADXL001 are located at MEM3-MEM4
                   {
-                  if(checkacc[5] > 0.0242){ 
+                  if(checkacc[5] > 0.016){ 
                  // P7OUT |= BIT5;
                  // P7DIR |= BIT5;
                   }}
@@ -154,6 +188,7 @@ adcsetup();
  }
 
 
+
 /*launch detec is based on the piezo sensor, when the output of the piezo is sufficient there is a voltage that will be seen on pin 2.7 of the microprocessor
 the idea is that until the vibration LEDL will be in  a low power mode. when the vibration happens it will act like a function and be automatically go into
 determining if there is launch. To determine it will have to analyze the accelerometers and determine if there is any acceleration which could not be zero.
@@ -161,6 +196,7 @@ determining if there is launch. To determine it will have to analyze the acceler
  for vibrations again. that way in the case its being handeld it will not wake from lowpower mode for some x amount of time to reduce the amount of time LEDL
  checks for launch. To do this, it should be like when i had the log data as an automatic function that is dependant on 2.7 being high. This could be done simply with events. 
  need to check out events to set up this as an automatic function. */
+
 
 
 

@@ -20,6 +20,8 @@
 #include <terminal.h>
 #include <SDlib.h>
 #include "SetUp.h"
+#include "LaunchDetect.h"
+#include "LEDL.h"
 
 
 
@@ -29,41 +31,54 @@ return async_TxChar(ch);//This is used for sending UART characters to ARCbus Thi
 //return TxChar(ch);//This is used for sending UART characters to mini USB drive. Dont forget to initialize this below if it is being used 
 }
 
+int __getchar(void){
+return async_Getc();
+}
+
 //Creating task structure 
 CTL_TASK_t mainTask;
 CTL_TASK_t Perif_SetUp; 
 CTL_TASK_t I2C;
-CTL_TASK_t SD_card;
 CTL_TASK_t LaunchDetect;
+CTL_TASK_t LaunchData;
+CTL_TASK_t LEDL_events;
 
-//CTL_TASK_t LaunchData;
 
 //Create size of stack necessary for storage of task information during task change times
-//unsigned stack1[1+256+1];   
-unsigned stack2[1+700+1];
-unsigned stack3[1+200+1];
-unsigned stack4[1+100+1];
+unsigned stack1[1+256+1];   
+unsigned stack2[1+400+1];
+unsigned stack3[1+100+1];
+unsigned stack6[1+200+1];
+
 //unsigned stack5[1+100+1];
 
 
-void main(void)
-{
+void main(void){
 
 
-const TERM_SPEC async_term={"ARC Bus Test Program",async_Getc};
+
 //Initialize the clock to run the microprocessor
 ARC_setup_lv();//sets up initializes the clocks and should be called at the beginning of main
 //initCLK();//this is now set up in ARC_setup 
 //Initialize the uart to talk with terra term 
 
+VREGinit();//INITALIZE THE VOLTAGE REGULATOR 
 //initUART();//initalize when using TxChar(ch)
-//setup I2C for use of UCB1
+//setup I2C for use of UCB1 
 initI2C();
-
+ 
 //set up timer
 init_timerA(); // some of the set up is now started in ARC_setup 
 mmcInit_msp();
 setup_launch_detect();
+//setup_orbit_start();
+UnusedPinSetup();//drive all unused pins to outputs 
+SENSORSoff();
+Gyroinit();
+MAGoff();
+ACCoff();
+mmcInit_msp_off();
+RESET_LED();
 
 //Initialize the main task 
 initARCbus(BUS_ADDR_LEDL); 
@@ -72,19 +87,10 @@ initARCbus(BUS_ADDR_LEDL);
 //timersetup();
 //test print
 
+P4DIR |= BIT1|BIT2|BIT3|BIT5|BIT6|BIT7;//LIGHT UP LED'S AS OUTPUTS 
+P4OUT &= ~(BIT1|BIT2|BIT3|BIT5|BIT6|BIT7);
 
-VREGon();
-//need to have a setteling time for the voltage regulator
-//then initalize the 16 Mhz clock 
-__delay_cycles(1000);
 
-WDT_KICK(); 
-
-initCLK();
-
-MAGoff();
-ACCon();
-SENSORSon();
 
 
 
@@ -114,9 +120,9 @@ SENSORSon();
  //test  finished
  //printf("YOU ARE FINISHED!!!\n\r");
 
-//memset(stack1,0xcd,sizeof(stack1));//function memset, sets all values(array stack1, everything equals this value, 
+memset(stack1,0xcd,sizeof(stack1));//function memset, sets all values(array stack1, everything equals this value, 
 //size of array so everything is changed)
-//stack1[0]=stack1[sizeof(stack1)/sizeof(stack1[0])-1]=0xfeed;//put marker values at the words before/after the stack. 
+stack1[0]=stack1[sizeof(stack1)/sizeof(stack1[0])-1]=0xfeed;//put marker values at the words before/after the stack. 
 
 memset(stack2,0xcd,sizeof(stack2));  // write known values into the stack
 stack2[0]=stack2[sizeof(stack2)/sizeof(stack2[0])-1]=0xfeed; // put marker values at the words before/after the stack
@@ -124,22 +130,22 @@ stack2[0]=stack2[sizeof(stack2)/sizeof(stack2[0])-1]=0xfeed; // put marker value
 memset(stack3,0xcd,sizeof(stack3));  // write known values into the stack
 stack3[0]=stack3[sizeof(stack3)/sizeof(stack3[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
-memset(stack4,0xcd,sizeof(stack4));  // write known values into the stack
-stack4[0]=stack4[sizeof(stack4)/sizeof(stack4[0])-1]=0xfeed; // put marker values at the words before/after the stack
-
 //memset(stack5,0xcd,sizeof(stack5));  // write known values into the stack
 //stack5[0]=stack5[sizeof(stack5)/sizeof(stack5[0])-1]=0xfeed; // put marker values at the words before/after the stack
+
+memset(stack6,0xcd,sizeof(stack6));  // write known values into the stack
+stack6[0]=stack6[sizeof(stack6)/sizeof(stack6[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
 ctl_events_init(&handle_SDcard, 0);
 
 
 //start timer A (taken from Jesse's code so that I can have an interrupt for my timer)
 //start_timerA();
-ctl_task_run(&Perif_SetUp,2,Periferial_SetUp,(void*)&async_term,"Periferial_SetUp",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);//side note, the termainal can be used in two ways by either passing the uart functin or the async function 
+ctl_task_run(&Perif_SetUp,2,Periferial_SetUp,"ARC Bus Test Program","Periferial_SetUp",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);//side note, the termainal can be used in two ways by either passing the uart functin or the async function 
 ctl_task_run(&I2C,2,takeI2Cdata,NULL,"takeI2Cdata",sizeof(stack3)/sizeof(stack3[0])-2,stack3+1,0);
-ctl_task_run(&SD_card,3,writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);
-//ctl_task_run(&LaunchData,2,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address 
-/*ctl_task_run(&LaunchDetect,4,VerifyLaunchDetect,NULL,"VerifyLaunchDetect",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);*/
+ctl_task_run(&LaunchData,2,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address
+ctl_task_run(&LEDL_events,2,sub_events,NULL,"sub_events",sizeof(stack6)/sizeof(stack6[0])-2,stack6+1,0);//this is to run orbit code
+//ctl_task_run(&LaunchDetect,4,VerifyLaunchDetect,NULL,"VerifyLaunchDetect",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);
 //of the variable which is the task structure is ,2 is the priority,launch_data_log is the function I want to run,"launch_data_log" is 
 //the name when I look at the threads window to identify the task,the size of the memory stack minus the guard bits,
 //first location where data is stored second element in array (first element is guard bit), the zero is a placeholder
@@ -150,8 +156,9 @@ ctl_task_run(&SD_card,3,writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4
 
  //Stay in an infinite loop
 //for(;;){// taken care of in main loop
-P5SEL |= BIT6;
-P5DIR |= BIT6;
+//P5SEL |= BIT6;//OUTPUT aclk
+//P5DIR |= BIT6;//output aclk
+//mainLoop_lp();
 mainLoop();
 
 }

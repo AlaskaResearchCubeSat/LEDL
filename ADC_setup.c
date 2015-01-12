@@ -11,8 +11,26 @@ void adc_int(void) __interrupt[ADC12_VECTOR]{//this is an interrupt function the
   
   //handle_adc = 1;
   //P7OUT=BIT1;
-  ADC12IFG=0;
-  ADC12CTL0|=ADC12SC;//need another comment 
+  switch(ADC12IV){
+    case ADC12IV_ADC12IFG7:
+      ADC12IFG&=~BIT7;
+      ADC12CTL0|=ADC12SC;//need another comment 
+      ctl_events_set_clear(&handle_adc,1<<0,0);
+    break;
+    case ADC12IV_ADC12IFG8:
+      ADC12IFG&=~BIT8;
+      GyroMuxon();
+      ADC12CTL0&=~ENC;     //disable ADC
+      ADC12CTL1&=~CSTARTADD_15;   //clear CSTARTADD
+      ADC12CTL1|= CSTARTADD_9;    // CSTARTADD
+      ADC12CTL0|=ADC12SC|ENC;//need another comment 
+      
+    break;
+    case ADC12IV_ADC12IFG10: 
+       ADC12IFG&=~BITA;
+       GyroMuxoff();
+        //TODO: set flag?
+    break;
   /*#define ARR_LENGTH 8
   volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0
   int i; 
@@ -30,7 +48,8 @@ void adc_int(void) __interrupt[ADC12_VECTOR]{//this is an interrupt function the
     }
   }*/
       //set event
-    ctl_events_set_clear(&handle_adc,1<<0,0);
+    
+}
 }
 
 void adcsetup(void){
@@ -53,6 +72,11 @@ void adcsetup(void){
   ADC12MCTL6 = SREF_0 | INCH_6; //USED SOURCE VOLTAGE TO COMPARE RAILS | INPUT CHANNEL IS A6
   ADC12MCTL7 = SREF_0 | INCH_7 | EOS; //USED SOURCE VOLTAGE TO COMPARE RAILS | INPUT CHANNEL IS A7| END OF SEQUENCE
 
+
+  ADC12MCTL8 = SREF_0 | INCH_7 | EOS;//SPEICFYING FOR ORBIT GYRO DATA
+  ADC12MCTL9 = SREF_0 | INCH_6; 
+  ADC12MCTL10= SREF_0 | INCH_7 | EOS; 
+
   ADC12IFG = 0; // SET ALL FLAGS TO 0
 
   ADC12IE = BIT7; // ENABLE THE INTERUPTS FOR IE7
@@ -74,4 +98,3 @@ void adcsetup(void){
 //__no_operation();
 // P7DIR = 0XFF;
 }
-

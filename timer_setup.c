@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "uart.h"
 #include "ctl.h"
+#include "sensor-interface.h"
 
 
 void timersetup(void){
@@ -13,8 +14,8 @@ TACCR0 = 4000;
 TACCR1 = 3750; 
 TACCTL1 = OUTMOD_3 ; //
 
-P2SEL |= BIT3;//this bit is the visual output pin that shows the high out pin from the timer
-P2DIR |= BIT3;//
+//P2SEL |= BIT3;//this bit is the visual output pin that shows the high out pin from the timer
+//P2DIR |= BIT3;//
 
 TACTL |= MC_1; // in up mode counts to TACCR0,
 }
@@ -35,13 +36,7 @@ TACTL |= MC_1; // in up mode counts to TACCR0,
 }
 
 
-//The following three functions I pulled from Jesse Code, If these are used all timer functions have to be used in continuous mode
-//use majority function so the timer
-//can be read while it is running
-short readTA(void){
-  int a=TAR,b=TAR,c=TAR;
-  return (a&b)|(a&c)|(b&c);
-}
+
 // removing this due to ARC_setup will take care of all the timer setup 
 //setup timer A to run off 32.768kHz xtal
 void init_timerA(void){
@@ -72,12 +67,25 @@ void start_timerA(void){
 */
 
 void task_tick_forADC(void) __ctl_interrupt[TIMERA1_VECTOR]{
+  extern MAG_TIME mag_time;
+  extern short int_count;
+  extern CTL_EVENT_SET_t sens_ev;
   switch(TAIV){
-  case TAIV_TACCR1:
-  //set rate to 8000Hz to change this later on, change the TACCR1+=4 for final value to take accelerometer data at 4kHz 
-  TACCR1+=4;
-  //increment timer
-  break;
+    case TAIV_TACCR1:
+        //set rate to 8000Hz to change this later on, change the TACCR1+=4 for final value to take accelerometer data at 4kHz 
+        TACCR1+=4;
+        //increment timer
+    break;
+    case TAIV_TACCR2:
+        //setup next interrupt
+        TACCR2+=mag_time.T;
+        //decrement count
+        int_count--;
+        if(int_count<=0){
+          ctl_events_set_clear(&sens_ev,SENS_EV_READ,0);
+          int_count=mag_time.n;
+        }
+     break;
 }
 
 }
