@@ -1,7 +1,6 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
-#include "uart.h"
 #include "ARCbus.h"
 #include <terminal.h>
 #include "log_data.h"
@@ -14,8 +13,6 @@
 #include "I2C_sensor.h"
 #include <ctl.h>
 #include "SensorsOnOff.h"
-#include "UCA1_uart.h"
-#include <UART_queue.h>
 #include "sensor-interface.h"
 #include "Z:\Software\ADCS\ACDS-flight\SensorDataInterface.h"
 #include "LaunchDetect.h"

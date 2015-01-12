@@ -1,7 +1,6 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
-#include "uart.h"
 #include "SensorsOnOff.h"
 #include <ctl.h>
 

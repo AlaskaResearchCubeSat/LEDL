@@ -1,7 +1,6 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
-#include "uart.h"
 
 void initCLK(void){
   //set XT1 load caps, do this first so XT1 starts up sooner//sets up Aclk

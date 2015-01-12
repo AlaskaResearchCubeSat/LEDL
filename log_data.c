@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <ctl.h>
 #include <ARCbus.h>
-#include "uart.h"
 #include "ADC_setup.h"
 #include "I2C_sensor.h"
 #include "timer_setup.h"
@@ -58,7 +57,7 @@ printf("\rtest#\tA0\tA1\tA2\tA3\tA4\tA5\tA6\tA7\r\n");//gives a column title
          printf("\r\nPlace the results in Document ARC1-LEDL-TST-LEDLPROTO-R01 section ADC Test.\r\n");
          printf("When finished press the space bar to continue.\r\n");
          while(ADCread!=' '){//continues to check to see if the space bar was hit.  
-         ADCread = Getc();//We expect the ascii key for return to be in the return value.  
+         ADCread = getchar();//We expect the ascii key for return to be in the return value.  
          }ADCread=0;
      }
     }

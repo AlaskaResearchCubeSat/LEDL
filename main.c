@@ -7,7 +7,6 @@
 #include <ctl.h>//this allows the use of tasking
 #include <terminal.h>//this echos what is written into the terminal screen, this allows for commands to be used and looked at in terra term
 #include <string.h>
-#include "uart.h"
 #include "MSPtest.h"
 #include "OscillatorTest.h"
 #include "SensorsOnOff.h"
@@ -15,7 +14,7 @@
 #include "log_data.h"//quotes for files in a project
 #include <i2c.h>//brackets for files in a library include this file when ever the i2c functions are used. 
 #include "I2C_sensor.h"
-#include "ARCbus.h"
+#include <ARCbus.h>
 #include "timer_setup.h"
 #include <terminal.h>
 #include <SDlib.h>

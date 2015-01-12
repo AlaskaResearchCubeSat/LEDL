@@ -1,7 +1,6 @@
 #include <msp430.h>
 #include <string.h>
 #include <stdio.h>
-#include "uart.h"
 #include <ctl.h>
 #include "ARCbus.h"
 #include "ADC_setup.h"

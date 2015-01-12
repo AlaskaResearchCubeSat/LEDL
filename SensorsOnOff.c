@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctl.h>
-#include "uart.h"
 
 
 
@@ -17,7 +16,7 @@
   /*
    printf("When finished taking voltage measurment for sensor on press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
-    checksensors = Getc();//We expect the ascii key for return to be in the return value.  
+    checksensors = getchar();//We expect the ascii key for return to be in the return value.  
     }
     checksensors=0;
     */
@@ -32,7 +31,7 @@
   /*
   printf("When finished taking voltage measurment for sensor off press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
-    checksensors = Getc();//We expect the ascii key for return to be in the return value.  
+    checksensors = getchar();//We expect the ascii key for return to be in the return value.  
     }
     checksensors=0;
     */
@@ -48,7 +47,7 @@
   /*
   printf("When finished taking voltage measurment for acc on press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
-    checksensors = Getc();//We expect the ascii key for return to be in the return value.  
+    checksensors = getchar();//We expect the ascii key for return to be in the return value.  
     }
     checksensors=0;
     */
@@ -62,7 +61,7 @@
 //  P4OUT &= ~BIT3;//lED TURNS OFF TO INDICATE SENSORS ARE OFF
   /*printf("When finished taking voltage measurment for acc off press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
-    checksensors = Getc();//We expect the ascii key for return to be in the return value.  
+    checksensors = getchar();//We expect the ascii key for return to be in the return value.  
     }
     checksensors=0;
     */
@@ -77,7 +76,7 @@
   /*
   printf("When finished taking voltage measurment for mag on press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
-    checksensors = Getc();//We expect the ascii key for return to be in the return value.  
+    checksensors = getchar();//We expect the ascii key for return to be in the return value.  
     }
     checksensors=0;
     */
@@ -93,7 +92,7 @@
   /*
   printf("When finished taking voltage measurment for mag off press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
-    checksensors = Getc();//We expect the ascii key for return to be in the return value.  
+    checksensors = getchar();//We expect the ascii key for return to be in the return value.  
     }
     checksensors=0;
     */

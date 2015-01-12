@@ -5,6 +5,7 @@
 #include "SensorsOnOff.h"
 #include <commandLib.h>
 #include <I2C.h>
+#include <ARCbus.h>
 
 
 
@@ -82,7 +83,7 @@ int mag_take_data(char **argv,unsigned short argc){
     }else{
       printf("%li %li\r\n",result[0],result[1]);
     }
-    c=Getc();
+    c=async_CheckKey();
   }while(!(c==0x03  || c=='Q' || c=='q' || single||c==' '));
   return 0;
   MAGoff();
