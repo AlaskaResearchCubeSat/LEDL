@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "uart.h"
+#include "SensorsOnOff.h"
 #include <ctl.h>
 
 CTL_EVENT_SET_t handle_adc;

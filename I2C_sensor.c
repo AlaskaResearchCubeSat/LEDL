@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "I2C_sensor.h"
+#include "SensorsOnOff.h"
 #include <commandLib.h>
 #include <I2C.h>
 
