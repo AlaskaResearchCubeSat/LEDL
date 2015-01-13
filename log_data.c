@@ -174,7 +174,7 @@ extern int switch_is_on;
           printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
           
           }
-          ctl_task_run(&SD_card,3,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
+          ctl_task_run(&SD_card,BUS_PRI_EXTRA_HIGH,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
           //this gets started after I begin taking data and stops when I am finished taking data, this is done here to prevent the SD card lines from turning on and off from main 
          initCLK();
          ctl_events_set_clear(&handle_LaunchData,0, LaunchData_flag);

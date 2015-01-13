@@ -139,10 +139,10 @@ ctl_events_init(&handle_SDcard, 0);
 
 //start timer A (taken from Jesse's code so that I can have an interrupt for my timer)
 //start_timerA();
-ctl_task_run(&Perif_SetUp,2,Periferial_SetUp,"ARC Bus Test Program","Periferial_SetUp",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);//side note, the termainal can be used in two ways by either passing the uart functin or the async function 
-ctl_task_run(&I2C,2,(void(*)(void*))takeI2Cdata,NULL,"takeI2Cdata",sizeof(stack3)/sizeof(stack3[0])-2,stack3+1,0);
-ctl_task_run(&LaunchData,2,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address
-ctl_task_run(&LEDL_events,2,sub_events,NULL,"sub_events",sizeof(stack6)/sizeof(stack6[0])-2,stack6+1,0);//this is to run orbit code
+ctl_task_run(&Perif_SetUp,BUS_PRI_LOW,Periferial_SetUp,"ARC Bus Test Program","Periferial_SetUp",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);//side note, the termainal can be used in two ways by either passing the uart functin or the async function 
+ctl_task_run(&I2C,BUS_PRI_NORMAL,(void(*)(void*))takeI2Cdata,NULL,"takeI2Cdata",sizeof(stack3)/sizeof(stack3[0])-2,stack3+1,0);
+ctl_task_run(&LaunchData,BUS_PRI_HIGH,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address
+ctl_task_run(&LEDL_events,BUS_PRI_NORMAL+10,sub_events,NULL,"sub_events",sizeof(stack6)/sizeof(stack6[0])-2,stack6+1,0);//this is to run orbit code
 //ctl_task_run(&LaunchDetect,4,VerifyLaunchDetect,NULL,"VerifyLaunchDetect",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);
 //of the variable which is the task structure is ,2 is the priority,launch_data_log is the function I want to run,"launch_data_log" is 
 //the name when I look at the threads window to identify the task,the size of the memory stack minus the guard bits,
