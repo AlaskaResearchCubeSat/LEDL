@@ -17,6 +17,7 @@
 #include "Z:\Software\ADCS\ACDS-flight\SensorDataInterface.h"
 #include "LaunchDetect.h"
 #include "Commands.h"
+#include "log_data.h"
 
 
 
@@ -570,9 +571,9 @@ int printmultiCmd(char **argv, unsigned short argc){//copied print mmcdump comma
 //return memory card to address zero
 extern int SDaddr;
 int mmc_address_zeroCmd(char **argv, unsigned short argc){
-SDaddr=0;
-if (SDaddr==0)
-{printf("sucess memory starting at Zero");}
+SDaddr=SD_LAUNCH_DATA_START;
+if (SDaddr==SD_LAUNCH_DATA_START)
+{printf("sucess memory starting at %lu",SD_LAUNCH_DATA_START);}
 ctl_timeout_wait(ctl_get_current_time()+10); 
 } 
 /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -73,7 +73,7 @@ CTL_TASK_t clyde;
 
 
 //static int launch_data[LAUNCH_DATA_SIZE];
-unsigned long SDaddr=0;
+unsigned long SDaddr=SD_LAUNCH_DATA_START;
 static int *launch_data1;
 static int *launch_data2;
 int temp_measure[TEMP_ARRAY_SIZE];
