@@ -599,7 +599,7 @@ int turnonsdcardCmd(char **argv, unsigned short argc){
           //initalize the SD card 
           ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
           initCLK();//SD card expects the 16 MHz clock 
-          mmcInit_msp();
+          mmc_pins_on();
           mmcReturnValue=mmcInit_card();
           if (mmcReturnValue==MMC_SUCCESS){
           printf("\rCard initalized Sucessfully\r\n");
@@ -611,7 +611,7 @@ int turnonsdcardCmd(char **argv, unsigned short argc){
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 int turnoffsdcardCmd(char **argv, unsigned short argc){
-       mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+       mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
        SENSORSoff();
        initCLK_lv();//Reduce clock speed for low voltage application
        ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 

@@ -165,7 +165,7 @@ extern int switch_is_on;
           //initalize the SD card   
           ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
 
-          mmcInit_msp();
+          mmc_pins_on();
           mmcReturnValue=mmcInit_card();
           if (mmcReturnValue==MMC_SUCCESS){
           printf("\rCard initalized Sucessfully\r\n");
@@ -407,7 +407,7 @@ extern int switch_is_on;
        GyroSleep();
        ctl_events_set_clear(&handle_SDcard,SD_EV_DIE,0);//this sends the flag to allow for the SD card to shut down 
        ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_FINISHED,CTL_TIMEOUT_NONE,0);//this waits for SD card to finish writing the last block so that it can shutdown 
-       mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+       mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
        SENSORSoff();
        BUS_free_buffer();
        initCLK_lv();//Reduce clock speed for low voltage application

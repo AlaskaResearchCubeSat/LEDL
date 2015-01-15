@@ -18,7 +18,7 @@ void Periferial_SetUp(void *p) __toplevel {
           //initalize the SD card 
           ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
           initCLK();//SD card expects the 16 MHz clock 
-          mmcInit_msp();
+          mmc_pins_on();
 
     ctl_timeout_wait(ctl_get_current_time()+5);
     while (!async_isOpen())
@@ -35,7 +35,7 @@ void Periferial_SetUp(void *p) __toplevel {
     }
     ///////////////////////Testing 
      printf("\rSD card is now off, use SDon to access SD card\r\n");
-          mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+          mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
           SENSORSoff();
           initCLK_lv();//Reduce clock speed for low voltage application
           VREGoff();//turn Voltage regulator off for low power application

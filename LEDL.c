@@ -65,7 +65,7 @@ void sub_events(void *p) __toplevel{
 
                   //initalize the SD card 
                   ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
-                  mmcInit_msp();
+                  mmc_pins_on();
                   mmcReturnValue=mmcInit_card();
                   if (mmcReturnValue==MMC_SUCCESS){
                   printf("\rCard initalized Sucessfully\r\n");
