@@ -20,6 +20,7 @@
 #include "SetUp.h"
 #include "LaunchDetect.h"
 #include "LEDL.h"
+#include "sensor-interface.h"
 
 
 
@@ -40,12 +41,14 @@ CTL_TASK_t I2C;
 CTL_TASK_t LaunchDetect;
 CTL_TASK_t LaunchData;
 CTL_TASK_t LEDL_events;
+CTL_TASK_t ACDS_sen_task;
 
 
 //Create size of stack necessary for storage of task information during task change times
 unsigned stack1[1+256+1];   
 unsigned stack2[1+400+1];
 unsigned stack3[1+100+1];
+unsigned stack5[1+400+1];
 unsigned stack6[1+200+1];
 
 //unsigned stack5[1+100+1];
@@ -128,8 +131,8 @@ stack2[0]=stack2[sizeof(stack2)/sizeof(stack2[0])-1]=0xfeed; // put marker value
 memset(stack3,0xcd,sizeof(stack3));  // write known values into the stack
 stack3[0]=stack3[sizeof(stack3)/sizeof(stack3[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
-//memset(stack5,0xcd,sizeof(stack5));  // write known values into the stack
-//stack5[0]=stack5[sizeof(stack5)/sizeof(stack5[0])-1]=0xfeed; // put marker values at the words before/after the stack
+memset(stack5,0xcd,sizeof(stack5));  // write known values into the stack
+stack5[0]=stack5[sizeof(stack5)/sizeof(stack5[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
 memset(stack6,0xcd,sizeof(stack6));  // write known values into the stack
 stack6[0]=stack6[sizeof(stack6)/sizeof(stack6[0])-1]=0xfeed; // put marker values at the words before/after the stack
@@ -148,6 +151,10 @@ ctl_task_run(&LEDL_events,BUS_PRI_NORMAL+10,sub_events,NULL,"sub_events",sizeof(
 //the name when I look at the threads window to identify the task,the size of the memory stack minus the guard bits,
 //first location where data is stored second element in array (first element is guard bit), the zero is a placeholder
 //since the MSP doesn't support this function. 
+
+
+//put this here for now
+ctl_task_run(&ACDS_sen_task,BUS_PRI_LOW+10,ACDS_sensor_interface,NULL,"ACDS_sensor_interface",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);
 
 //Use I2C sensor function to receive data
 
