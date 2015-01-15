@@ -81,18 +81,11 @@ MAGoff();
 ACCoff();
 RESET_LED();
 
-//Initialize the main task 
-initARCbus(BUS_ADDR_LEDL); 
-//ctl_task_init(&mainTask, 255, "main");//When you start the tasking you start the interrupts //this is taken care of in ARC_bus 
-//set up timerA
-//timersetup();
-//test print
-
 P4DIR |= BIT1|BIT2|BIT3|BIT5|BIT6|BIT7;//LIGHT UP LED'S AS OUTPUTS 
 P4OUT &= ~(BIT1|BIT2|BIT3|BIT5|BIT6|BIT7);
 
-
-
+//Initialize the main task 
+initARCbus(BUS_ADDR_LEDL);
 
 
 //run MSP test
