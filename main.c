@@ -70,7 +70,7 @@ initI2C();
  
 //set up timer
 init_timerA(); // some of the set up is now started in ARC_setup 
-mmcInit_msp_off();
+mmcInit_msp();
 
 setup_launch_detect();
 //setup_orbit_start();
