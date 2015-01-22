@@ -75,7 +75,7 @@ extern CTL_EVENT_SET_t handle_LaunchDetect;
 
 
 //static int launch_data[LAUNCH_DATA_SIZE];
-unsigned long SDaddr=0;
+unsigned long SDaddr=SD_LAUNCH_DATA_START;
 static int *launch_data1;
 static int *launch_data2;
 int temp_measure[TEMP_ARRAY_SIZE];
@@ -182,7 +182,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           //initalize the SD card   
           ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
 
-          mmcInit_msp();
+          mmc_pins_on();
           mmcReturnValue=mmcInit_card();
           if (mmcReturnValue==MMC_SUCCESS){
           printf("\rCard initalized Sucessfully\r\n");
@@ -191,7 +191,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
       
           }
-          ctl_task_run(&SD_card,3,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
+          ctl_task_run(&SD_card,BUS_PRI_EXTRA_HIGH,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
           //this gets started after I begin taking data and stops when I am finished taking data, this is done here to prevent the SD card lines from turning on and off from main 
          initCLK();
          
@@ -501,7 +501,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
            GyroSleep();
            ctl_events_set_clear(&handle_SDcard,SD_EV_DIE,0);//this sends the flag to allow for the SD card to shut down 
            ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_FINISHED,CTL_TIMEOUT_NONE,0);//this waits for SD card to finish writing the last block so that it can shutdown 
-           mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+           mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
            SENSORSoff();
            BUS_free_buffer();
            initCLK_lv();//Reduce clock speed for low voltage application

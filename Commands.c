@@ -17,6 +17,7 @@
 #include "Z:\Software\ADCS\ACDS-flight\SensorDataInterface.h"
 #include "LaunchDetect.h"
 #include "Commands.h"
+#include "log_data.h"
 
 
 
@@ -570,9 +571,9 @@ int printmultiCmd(char **argv, unsigned short argc){//copied print mmcdump comma
 //return memory card to address zero
 extern int SDaddr;
 int mmc_address_zeroCmd(char **argv, unsigned short argc){
-SDaddr=0;
-if (SDaddr==0)
-{printf("sucess memory starting at Zero");}
+SDaddr=SD_LAUNCH_DATA_START;
+if (SDaddr==SD_LAUNCH_DATA_START)
+{printf("sucess memory starting at %lu",SD_LAUNCH_DATA_START);}
 ctl_timeout_wait(ctl_get_current_time()+10); 
 } 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -598,7 +599,7 @@ int turnonsdcardCmd(char **argv, unsigned short argc){
           //initalize the SD card 
           ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
           initCLK();//SD card expects the 16 MHz clock 
-          mmcInit_msp();
+          mmc_pins_on();
           mmcReturnValue=mmcInit_card();
           if (mmcReturnValue==MMC_SUCCESS){
           printf("\rCard initalized Sucessfully\r\n");
@@ -610,7 +611,7 @@ int turnonsdcardCmd(char **argv, unsigned short argc){
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 int turnoffsdcardCmd(char **argv, unsigned short argc){
-       mmcInit_msp_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+       mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
        SENSORSoff();
        initCLK_lv();//Reduce clock speed for low voltage application
        ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 

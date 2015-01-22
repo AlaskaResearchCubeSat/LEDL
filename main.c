@@ -20,6 +20,7 @@
 #include "SetUp.h"
 #include "LaunchDetect.h"
 #include "LEDL.h"
+#include "sensor-interface.h"
 
 
 
@@ -40,12 +41,14 @@ CTL_TASK_t I2C;
 CTL_TASK_t LaunchDetect;
 CTL_TASK_t LaunchData;
 CTL_TASK_t LEDL_events;
+CTL_TASK_t ACDS_sen_task;
 
 
 //Create size of stack necessary for storage of task information during task change times
 unsigned stack1[1+256+1];   
 unsigned stack2[1+400+1];
 unsigned stack3[1+100+1];
+unsigned stack5[1+400+1];
 unsigned stack6[1+200+1];
 //unsigned stack5[1+100+1];
 
@@ -67,6 +70,7 @@ initI2C();
 //set up timer
 init_timerA(); // some of the set up is now started in ARC_setup 
 mmcInit_msp();
+
 setup_launch_detect();
 //setup_orbit_start();
 UnusedPinSetup();//drive all unused pins to outputs 
@@ -74,21 +78,13 @@ SENSORSoff();
 Gyroinit();
 MAGoff();
 ACCoff();
-mmcInit_msp_off();
 RESET_LED();
-
-//Initialize the main task 
-initARCbus(BUS_ADDR_LEDL); 
-//ctl_task_init(&mainTask, 255, "main");//When you start the tasking you start the interrupts //this is taken care of in ARC_bus 
-//set up timerA
-//timersetup();
-//test print
 
 P4DIR |= BIT1|BIT2|BIT3|BIT5|BIT6|BIT7;//LIGHT UP LED'S AS OUTPUTS 
 P4OUT &= ~(BIT1|BIT2|BIT3|BIT5|BIT6|BIT7);
 
-
-
+//Initialize the main task 
+initARCbus(BUS_ADDR_LEDL);
 
 
 //run MSP test
@@ -127,8 +123,8 @@ stack2[0]=stack2[sizeof(stack2)/sizeof(stack2[0])-1]=0xfeed; // put marker value
 memset(stack3,0xcd,sizeof(stack3));  // write known values into the stack
 stack3[0]=stack3[sizeof(stack3)/sizeof(stack3[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
-//memset(stack5,0xcd,sizeof(stack5));  // write known values into the stack
-//stack5[0]=stack5[sizeof(stack5)/sizeof(stack5[0])-1]=0xfeed; // put marker values at the words before/after the stack
+memset(stack5,0xcd,sizeof(stack5));  // write known values into the stack
+stack5[0]=stack5[sizeof(stack5)/sizeof(stack5[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
 memset(stack6,0xcd,sizeof(stack6));  // write known values into the stack
 stack6[0]=stack6[sizeof(stack6)/sizeof(stack6[0])-1]=0xfeed; // put marker values at the words before/after the stack
@@ -138,15 +134,19 @@ ctl_events_init(&handle_SDcard, 0);
 
 //start timer A (taken from Jesse's code so that I can have an interrupt for my timer)
 //start_timerA();
-ctl_task_run(&Perif_SetUp,2,Periferial_SetUp,"ARC Bus Test Program","Periferial_SetUp",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);//side note, the termainal can be used in two ways by either passing the uart functin or the async function 
-ctl_task_run(&I2C,2,(void(*)(void*))takeI2Cdata,NULL,"takeI2Cdata",sizeof(stack3)/sizeof(stack3[0])-2,stack3+1,0);
-ctl_task_run(&LaunchData,2,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address
-ctl_task_run(&LEDL_events,2,sub_events,NULL,"sub_events",sizeof(stack6)/sizeof(stack6[0])-2,stack6+1,0);//this is to run orbit code
-//ctl_task_run(&LaunchDetect,2,VerifyLaunchDetect,NULL,"VerifyLaunchDetect",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);
+ctl_task_run(&Perif_SetUp,BUS_PRI_LOW,Periferial_SetUp,"ARC Bus Test Program","Periferial_SetUp",sizeof(stack2)/sizeof(stack2[0])-2,stack2+1,0);//side note, the termainal can be used in two ways by either passing the uart functin or the async function 
+ctl_task_run(&I2C,BUS_PRI_NORMAL,(void(*)(void*))takeI2Cdata,NULL,"takeI2Cdata",sizeof(stack3)/sizeof(stack3[0])-2,stack3+1,0);
+ctl_task_run(&LaunchData,BUS_PRI_HIGH,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address
+ctl_task_run(&LEDL_events,BUS_PRI_NORMAL+10,sub_events,NULL,"sub_events",sizeof(stack6)/sizeof(stack6[0])-2,stack6+1,0);//this is to run orbit code
+//ctl_task_run(&LaunchDetect,4,VerifyLaunchDetect,NULL,"VerifyLaunchDetect",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);
 //of the variable which is the task structure is ,2 is the priority,launch_data_log is the function I want to run,"launch_data_log" is 
 //the name when I look at the threads window to identify the task,the size of the memory stack minus the guard bits,
 //first location where data is stored second element in array (first element is guard bit), the zero is a placeholder
 //since the MSP doesn't support this function. 
+
+
+//put this here for now
+ctl_task_run(&ACDS_sen_task,BUS_PRI_LOW+10,ACDS_sensor_interface,NULL,"ACDS_sensor_interface",sizeof(stack5)/sizeof(stack5[0])-2,stack5+1,0);
 
 //Use I2C sensor function to receive data
 
