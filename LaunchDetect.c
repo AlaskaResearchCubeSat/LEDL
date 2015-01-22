@@ -49,9 +49,11 @@ void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt fu
   if (P2IFG&BIT7){
 
                   P2IFG &= ~BIT7;
-                  switch_is_on=1;
-                  //ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
-                  ctl_events_set_clear(&handle_LaunchData,LaunchData_flag,0);//this should start the data logging 
+                  //this is for launch 
+                  ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
+                   //use these two when doing testing 
+                   //switch_is_on=1;
+                  //ctl_events_set_clear(&handle_LaunchData,LaunchData_flag,0);//this should start the data logging 
                 
                   }
 
@@ -95,95 +97,100 @@ void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt fu
    }
  
 }
+/*
 //Code will verify if there is a launch 
-void VerifyLaunchDetect(void){
+void VerifyLaunchDetect(void *p){
 
- float checkacc[6];
+ float checkacc[6],xavg,yavg,zavg;
+ float totalacc;
  unsigned int data;
- int i;
+ int i=0,accel_count_for_launch_test=0,checking_launch=0;
+
  float acc18gconversion = 0.057; // volts per g
- float acc70gconversion = 0.0242; // volts per g
  float adcconversion = 0.0008057; // volts per adc reference 0 to 4096
+ float go_launch_value=0.00731;//this value is when a launch occures 0.0855^2
  unsigned e;
 printf("\rLEDL launch test. Press s to stop. \r\n>");// 
 adcsetup();
- while(async_CheckKey()!='s')
+checking_launch=1;
+ while(checking_launch)
  {
    unsigned checking_for_launch;
    checking_for_launch=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_LaunchDetect,(1<<0),CTL_TIMEOUT_NONE,0);
-   if(checking_for_launch&(0x01))
+   while(checking_for_launch&(0x01))
+   //if(checking_for_launch&LAUNCH_DETECT_FLAG)
    {
    //P7OUT = BIT7;
    //P7DIR = BIT7;
 
    //Code to check for acceleration, just pulled code from log_data file
- 
+   ctl_events_set_clear(&handle_LaunchDetect,0, 0x01);
     e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_adc,(1<<0),CTL_TIMEOUT_NONE,0);
       if(e&(0x01))
       {
         volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0, checks adc register 
-           { 
-              for (i=0; i<6; ++i)// look at first 6 adc measurements of acceleration  
-               {
-                checkacc[i]=arr[i];
-                //data is represented as a number from 0 to 4096 ( 0 V to 3.3 V), 0.0008057; volts per adc reference 0 to 4096
-                //a voltage conversion for the accelerometers
-                //   ADXL321 18 g accelerometer   57.0 mV per g 
-                //   ADXL001 70 g accelerometer   16 mV per g
-                checkacc[i]*=adcconversion;
-                checkacc[i]-=1.65;
-                checkacc[i]=fabsf(checkacc[i]);
-               
-                  if (i==0) // AXDL321 are located in MEM0-MEM2 
-                  {
-                  if ( checkacc[0] > 0.057){
-                 // P7OUT |= BIT0;
-                 // P7DIR |= BIT0;
-                  }}
-                  if (i==1) //ADXL001 are located at MEM3-MEM4
-                  {
-                  if(checkacc[1] > 0.057){
-                 // P7OUT |= BIT1;
-                 // P7DIR |= BIT1;
-                  }}
-                  if (i==2) //ADXL001 are located at MEM3-MEM4
-                  {
-                  if (checkacc[2] > 0.057){
-                  //P7OUT |= BIT2;
-                 // P7DIR |= BIT2;
-                  }}
-                  if (i==3) //ADXL001 are located at MEM3-MEM4
-                  {
-                  if (checkacc[3]  > 0.016){
-                 /// P7OUT |= BIT3;
-                  //P7DIR |= BIT3;
-                  }}
-                  if (i==4) //ADXL001 are located at MEM3-MEM4
-                  {
-                  if(checkacc[4]  > 0.016){
-                 // P7OUT |= BIT4;
-                 // P7DIR |= BIT4;
-                  }}
-                  if (i==5) //ADXL001 are located at MEM3-MEM4
-                  {
-                  if(checkacc[5] > 0.016){ 
-                 // P7OUT |= BIT5;
-                 // P7DIR |= BIT5;
-                  }}
-                  else
-                  {
-                 // P7OUT |= BIT6;
-                  //P7DIR |= BIT6;
-                  }
+            
+           
+                for (i=0; i<6; ++i)// look at first 6 adc measurements of acceleration  
+                {
+                  checkacc[i]=arr[i];
+                  //data is represented as a number from 0 to 4096 ( 0 V to 3.3 V), 0.0008057; volts per adc reference 0 to 4096
+                  //a voltage conversion for the accelerometers
+                  //   ADXL321 18 g accelerometer   57.0 mV per g 
+                  //   ADXL001 70 g accelerometer   16 mV per g
+                  checkacc[i]*=adcconversion;
+                  checkacc[i]-=1.65;
+                  checkacc[i]=fabsf(checkacc[i]);
                   
                 }
-               }  
+                  accel_count_for_launch_test++;
+                  if (accel_count_for_launch_test==1)
+                  {
+                  xavg=checkacc[5];//keep a running average on the samples
+             //     printf("Xavg = %f",xavg);
+                  yavg=checkacc[4];//keep a running average on the samples
+             //     printf("Yavg = %f",yavg);
+                  zavg=checkacc[3];//keep a running average on the samples. 
+              //    printf("Zavg = %f",zavg);
+                  }
+                  else
+                  {
+                  xavg=(xavg+checkacc[5])/2;//keep a running average on the samples
+                 // printf("Xavg = %f",xavg);
+                  yavg=(xavg+checkacc[4])/2;//keep a running average on the samples 
+                 // printf("Yavg = %f",yavg);
+                  zavg=(xavg+checkacc[3])/2;//keep a running average on the samples. 
+                //  printf("Zavg = %f",zavg);
+                  if (accel_count_for_launch_test==4100)
+                    {         
+                      totalacc=xavg*xavg+yavg*yavg+zavg*zavg;//find the total squared acceleration vector
+                        if (totalacc>go_launch_value)
+                        {
+                        //begin logging data
+                         switch_is_on=1; 
+                         checking_launch=0;
+                         printf("WE HAVE LAUNCH");
+                         accel_count_for_launch_test=0;
+                         P4OUT^=BIT5;
+                        
+                         ctl_events_set_clear(&handle_LaunchData,LaunchData_flag,0);//this should start the data logging
+                        }
+                        else{
+                        //go back to sleep 
+                        checking_launch=0;
+                        printf("NO Launch, return to sleep");
+                        accel_count_for_launch_test=0;
+                        }
+                    }
+                  }
+                    
+        }  
 
 
 
 
-            }
-      }
+      
+   }
    }
  }
 
