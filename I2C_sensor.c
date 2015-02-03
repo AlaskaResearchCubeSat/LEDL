@@ -123,7 +123,7 @@ for (i=0;i<TEMP_SENSORS;i++)
       check_value_rx = i2c_rx(all_temp_sensors[i],tmp,2);//place the address I want to talk to, 
       //the array that stores my data, number of bytes being sent
       array[i]=tmp[0];
-      printf("\r\nT%i = %i\r\n",i,tmp[0]);
+      //printf("\r\nT%i = %i\r\n",i,tmp[0]);
       ctl_timeout_wait(ctl_get_current_time()+1000);
       
       }
@@ -171,13 +171,8 @@ int clyde_take_data(int *array){
 int res,i,found=0;
 unsigned char tx[2],rx[2];
 unsigned short rez;
-//TURN ON I2C LINE FOR CLYDE 
-P7DIR |= BIT4;
-P7OUT |= BIT4;
+
 //Set
-
-ctl_timeout_wait(ctl_get_current_time()+3);
-
 printf("sent cmd \r\n");
 //send cmd\
 //take first 19 adc measurements for beacon 
@@ -185,41 +180,50 @@ for(i=0;i<20;i++)
 {
 tx[0]=EPS_ADC_COMMAND;
 tx[1]= name_addrs_clyde[i];
-res=i2c_tx(0x01,tx,2);
+res=i2c_tx(clyde_sensors,tx,2);
 //error msg or success
-printf("%s\r\n",I2C_error_str(res));
+if(res!=0){
+printf("tx returned = %s\r\n",I2C_error_str(res));
+}
 //wait 1.2 ms (300)
 ctl_timeout_wait(ctl_get_current_time()+5);
 //read cmd
-res=i2c_rx(0x01,rx,2);
+res=i2c_rx(clyde_sensors,rx,2);
 //error msg or success
-printf("%s\r\n",I2C_error_str(res));
+if (res!=0)
+{
+printf("rx returned = %s\r\n",I2C_error_str(res));
+}
 rez=rx[1];
 rez|=rx[0]<<8;
 rez&=0x3FF;
 printf("rez = %i\r\n",rez);
 array[i]=(int)rez;
+printf("EPS data = %i, array # = %i\r\n",array[i],i);
 }
+
 //take status packet for beacon
 tx[0]=EPS_STATUS_COMMAND;
 tx[1]=0;//THIS DOESNT MATTER WHAT IT IS 
-res=i2c_tx(0x01,tx,2);
+res=i2c_tx(clyde_sensors,tx,2);
 //error msg or success
-printf("%s\r\n",I2C_error_str(res));
+//printf("%s\r\n",I2C_error_str(res));
 //wait 1.2 ms (300)
 ctl_timeout_wait(ctl_get_current_time()+5);
 //read cmd
-res=i2c_rx(0x01,rx,2);
+res=i2c_rx(clyde_sensors,rx,2);
 //error msg or success
+if(res!=0)
+{
 printf("%s\r\n",I2C_error_str(res));
+}
 rez=rx[1];
 rez|=rx[0]<<8;
-rez&=0x3FF;
-printf("rez = %i\r\n",rez);
+
+printf("rez = 0x%04X\r\n",rez);
 array[i]=(int)rez;
 //turn LED off
 ctl_timeout_wait(ctl_get_current_time()+3);
 
-//TURN OFF I2C LINE FOR CLYDE 
-P7OUT&=~BIT4;
+
 }

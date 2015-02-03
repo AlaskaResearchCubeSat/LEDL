@@ -100,6 +100,7 @@ int logdataCmd(char **argv, unsigned short argc){
 #define INTERGER_STR  "%d "
 #define ASCIIOUT_STR  "%c "
 #define UNSIGNED_STR  "%u "
+#define FLOAT_STR     "%f "
 
 //////////////////////////////////////////////////////////////////////////////////////////
 int mmc_dump(char **argv, unsigned short argc){
@@ -387,6 +388,9 @@ int mmc_read(char **argv, unsigned short argc){
 int printCmd(char **argv, unsigned short argc){//copied print mmcdump command to change the format of how the data is presented in tera term. 
   int resp; 
   int *buffer=NULL;//changed from char to int instead of each char being 1 byte their are now two bytes, resulting in being half as many things to index 
+  LEDL_TEST_LAUNCH *launch_detect_data;
+  
+ 
   unsigned long sector=0;
   int i;
   if(argc!=0){
@@ -402,28 +406,82 @@ int printCmd(char **argv, unsigned short argc){//copied print mmcdump command to
     printf("Error : Timeout while waiting for buffer.\r\n");
     return -1;
   }
+  //below is done after get buffer
+  launch_detect_data=(LEDL_TEST_LAUNCH*)buffer;
   //read from SD card
   resp=mmcReadBlock(sector,(unsigned char*)buffer);
   //print response from SD card
   printf("%s\r\n",SD_error_str(resp));
   //print out buffer
-  for(i=0;i<256/26;i++){//changed the 512 to 256 which is a result of changing CHAR TO INT
 
-  if(i<8){
-    printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR "\r\n",
-    buffer[i*26],buffer[i*26+1],buffer[i*26+2],buffer[i*26+3],buffer[i*26+4],buffer[i*26+5],buffer[i*26+6],buffer[i*26+7],buffer[i*26+8],buffer[i*26+9],buffer[i*26+10],
-    buffer[i*26+11],buffer[i*26+12],buffer[i*26+13],buffer[i*26+14],buffer[i*26+15],buffer[i*26+16],buffer[i*26+17],buffer[i*26+18],buffer[i*26+19],buffer[i*26+20],
-    buffer[i*26+21],buffer[i*26+22],buffer[i*26+23],buffer[i*26+24],buffer[i*26+25]);
-    }
+  //check to see what kind of data packet is being printed 
+      if (buffer[0]==LEDL_DATA_ID  )//check to see if it is a Launch Packet 
+      {
+            //define printf formats
+#define HEXOUT_STR    "%02X "
+#define INTERGER_STR  "%d "
+#define ASCIIOUT_STR  "%c "
+#define UNSIGNED_STR  "%u "
+#define FLOAT_STR     "%f "
+#define LONG_STR      "%lu "
+        //in printing all my data, i want to print out first the LEDL packet id, then the sd address that this is supposed to be saved to
+      //the data will follow, then last by the crc 
+         printf("LEDL PACKET="HEXOUT_STR"\r\n", buffer[0]);
+         printf("SD_ADDRESS="LONG_STR"\r\n",*(unsigned long*)&buffer[1]);
+         //print all the data 
+        for(i=0;i<9;i++){//changed the 512 to 256 which is a result of changing CHAR TO INT
 
-  else{
-    printf(INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR UNSIGNED_STR UNSIGNED_STR "\r\n",
-    buffer[i*26],buffer[i*26+1],buffer[i*26+2],buffer[i*26+3],buffer[i*26+4],buffer[i*26+5],buffer[i*26+6],buffer[i*26+7],buffer[i*26+8],buffer[i*26+9],buffer[i*26+10],
-    buffer[i*26+11],buffer[i*26+12],buffer[i*26+13],buffer[i*26+14],buffer[i*26+15],buffer[i*26+16],buffer[i*26+17],buffer[i*26+18],buffer[i*26+19],buffer[i*26+20],
-    buffer[i*26+21],buffer[i*26+22],buffer[i*26+23],buffer[i*26+24],buffer[i*26+25],buffer[i*26+26]);
-    }
-   ctl_timeout_wait(ctl_get_current_time()+10); 
-  }
+        if(i<8){
+          printf(UNSIGNED_STR UNSIGNED_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR "\r\n",
+          buffer[i*28+3],buffer[i*28+4],buffer[i*28+5],buffer[i*28+6],buffer[i*28+7],buffer[i*28+8],buffer[i*28+9],buffer[i*28+10],buffer[i*28+11],buffer[i*28+12],buffer[i*28+13],
+          buffer[i*28+14],buffer[i*28+15],buffer[i*28+16],buffer[i*28+17],buffer[i*28+18],buffer[i*28+19],buffer[i*28+20],buffer[i*28+21],buffer[i*28+22],buffer[i*28+23],
+          buffer[i*28+24],buffer[i*28+25],buffer[i*28+26],buffer[i*28+27],buffer[i*28+28],buffer[i*28+29],buffer[i*28+30]);
+          }
+
+        else{
+          printf(UNSIGNED_STR UNSIGNED_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR INTERGER_STR UNSIGNED_STR UNSIGNED_STR "\r\n",
+          buffer[i*28+3],buffer[i*28+4],buffer[i*28+5],buffer[i*28+6],buffer[i*28+7],buffer[i*28+8],buffer[i*28+9],buffer[i*28+10],buffer[i*28+11],buffer[i*28+12],buffer[i*28+13],
+          buffer[i*28+14],buffer[i*28+15],buffer[i*28+16],buffer[i*28+17],buffer[i*28+18],buffer[i*28+19],buffer[i*28+20],buffer[i*28+21],buffer[i*28+22],buffer[i*28+23],
+          buffer[i*28+24],buffer[i*28+25],buffer[i*28+26],buffer[i*28+27],buffer[i*28+28],buffer[i*28+29],buffer[i*28+30]);
+          }
+        }
+        //last is print the crc 
+        printf("CRC="UNSIGNED_STR"\r\n",buffer[255]);//last space in the data packet 
+        ctl_timeout_wait(ctl_get_current_time()+10); 
+     }
+  else if(buffer[0]==LEDL_DETECT_ID )//check to see if it is a detect packet 
+      {
+       //below is after the transfer is done
+      printf("LEDL PACKET="HEXOUT_STR" \r\n"
+             "SD_ADDRESS="LONG_STR"\r\n"
+             "LAST SD USED="LONG_STR"\r\n"
+             "AVG ACCELEROMETER DATA X="FLOAT_STR"Y="FLOAT_STR"Z="FLOAT_STR"TOTAL ACC = "FLOAT_STR"\r\n"
+             "MAX AND MIN ACCELEROMTER DATA\r\nXMAX="FLOAT_STR"XMIN="FLOAT_STR"\r\nYMAX="FLOAT_STR"YMIN="FLOAT_STR"\r\nZMAX="FLOAT_STR"ZMIN="FLOAT_STR"\r\n"
+             "NUMBER OF DETECT="INTERGER_STR"\r\n"
+             "LEDL MODE="UNSIGNED_STR"\r\n"
+             "CRC = "UNSIGNED_STR"\r\n",
+            launch_detect_data->ledl_address,//LEDL_DETECT_ID
+            launch_detect_data->dat.detect_dat.SDaddress,//SDaddr
+            launch_detect_data->dat.detect_dat.SDaddress,//Last SD addr used by logging data
+            launch_detect_data->dat.detect_dat.accel_from_launch[0],//xavg
+            launch_detect_data->dat.detect_dat.accel_from_launch[1],//yavg
+            launch_detect_data->dat.detect_dat.accel_from_launch[2],//zavg
+            launch_detect_data->dat.detect_dat.accel_from_launch[3],//totalacc
+            launch_detect_data->dat.detect_dat.max_and_min_from_launch[0],//maxx
+            launch_detect_data->dat.detect_dat.max_and_min_from_launch[1],//minx
+            launch_detect_data->dat.detect_dat.max_and_min_from_launch[2],//maxy
+            launch_detect_data->dat.detect_dat.max_and_min_from_launch[3],//miny
+            launch_detect_data->dat.detect_dat.max_and_min_from_launch[4],//maxz
+            launch_detect_data->dat.detect_dat.max_and_min_from_launch[5],//minz
+            launch_detect_data->dat.detect_dat.number_of_detect,//wake_up_attempt
+            launch_detect_data->dat.detect_dat.mode_status,//specify what mode ledl is in
+            launch_detect_data->crc);//crc check 
+
+      }
+  else 
+      {
+      printf("Error : Packet address not found %i", buffer[0]);
+      }
   //free buffer
   BUS_free_buffer();
   
@@ -569,7 +627,7 @@ int printmultiCmd(char **argv, unsigned short argc){//copied print mmcdump comma
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //return memory card to address zero
-extern int SDaddr;
+extern unsigned long SDaddr;
 int mmc_address_zeroCmd(char **argv, unsigned short argc){
 SDaddr=SD_LAUNCH_DATA_START;
 if (SDaddr==SD_LAUNCH_DATA_START)
@@ -577,8 +635,29 @@ if (SDaddr==SD_LAUNCH_DATA_START)
 ctl_timeout_wait(ctl_get_current_time()+10); 
 } 
 /////////////////////////////////////////////////////////////////////////////////////////////////
+/*//set launch mode 
+extern int startup_mode;
+int set_LEDL_mode_Cmd(char **argv, unsigned short argc){
+startup_mode=SD_LAUNCH_DATA_START;
+if (startup_mode==MODE_DETECT) 
+{printf("ERROR: unknown mode %d",startUp_mode);
+ctl_timeout_wait(ctl_get_current_time()+10);
+}          
+else if(startup_mode==MODE_LAUNCH) 
+{printf("ERROR: unknown mode %d",startUp_mode);
+ctl_timeout_wait(ctl_get_current_time()+10);
+}          
+else if (startup_mode==MODE_ORBIT)
+{printf("ERROR: unknown mode %d",startUp_mode);
+ctl_timeout_wait(ctl_get_current_time()+10);
+}
+else
+{printf("ERROR: unknown mode %d",startUp_mode);}
+ctl_timeout_wait(ctl_get_current_time()+10); 
+} */
+/////////////////////////////////////////////////////////////////////////////////////////////////
 //return memory card address to be read 
-extern int SDaddr;
+extern unsigned long SDaddr;
 int mmc_address_Cmd(char **argv, unsigned short argc){
 {printf("Memory is at %d",SDaddr);}
 ctl_timeout_wait(ctl_get_current_time()+10); 
@@ -805,7 +884,7 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                           {"pdm","Hard reset switches power busses off.\r\n\t",pdmcmd},
                           {"version","provieds firmware version number of the CLYDE board\n\r\t",versioncmd},
                           {"temp","provides temperature measurement\n\r\t",tempcmd},
-                          MMC_COMMANDS,CTL_COMMANDS,I2C_COMMANDS,
+                          MMC_COMMANDS,CTL_COMMANDS,I2C_COMMANDS,ERROR_COMMANDS,
                          //end of list
                          {NULL,NULL,NULL}};
 

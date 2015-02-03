@@ -83,27 +83,27 @@ unsigned short magFlags;
 
 //LED stuff
 void meas_LED_on(void){
-  P7OUT|=BIT1;
+  //P7OUT|=BIT1;
 }
 
 void meas_LED_off(void){
-  P7OUT&=~BIT1;
+ // P7OUT&=~BIT1;
 }
 
 void sens_err_LED_on(void){
-  P7OUT|=BIT0;
+ // P7OUT|=BIT0;
 }
 
 void sens_err_LED_off(void){
-  P7OUT&=~BIT0;
+  //P7OUT&=~BIT0;
 }
 
 void com_err_LED_on(void){
-  P7OUT|=BIT4;
+  //P7OUT|=BIT4;
 }
 
 void com_err_LED_off(void){
-  P7OUT&=~BIT4;
+ // P7OUT&=~BIT4;
 }
 
 //address for magnetometer        X+   X-   Y+   Y-   Z+   Z-

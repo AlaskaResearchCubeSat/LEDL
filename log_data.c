@@ -75,19 +75,21 @@ extern CTL_EVENT_SET_t handle_LaunchDetect;
 
 
 //static int launch_data[LAUNCH_DATA_SIZE];
-unsigned long SDaddr=SD_LAUNCH_DATA_START;
+unsigned long SDaddr=SD_LAUNCH_DATA_START;//STARTING SDaddr at 65
 static int *launch_data1;
 static int *launch_data2;
 int temp_measure[TEMP_ARRAY_SIZE];
 int clyde_data[CLYDE_ARRAY_SIZE];
 int clyde_measure;
 int mag_measure;
+long wake_up_attempt=0;
+int result;
 
 
 unsigned stack4[1+100+1];//stacks need to be a globals 
  
 
-
+int startup_mode;
 void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK LIBRARY 
 //void launch_data_log(void){// used to set up code // USE THIS ONE FOR JUST USING IT AS A FUNCITON 
 extern int switch_is_on;
@@ -108,7 +110,7 @@ int signal_mux=0;// making signal that will cause mux to switch between gyro 2 (
 unsigned event1;
 int *launch_data;
 int crc_check;
-SDaddr+=1;
+//SDaddr+=1; //address already starts at 65
 
 memset(stack4,0xcd,sizeof(stack4));  // write known values into the stack
 stack4[0]=stack4[sizeof(stack4)/sizeof(stack4[0])-1]=0xfeed; // put marker values at the words before/after the stack
@@ -134,37 +136,135 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
 
 //while(async_CheckKey()!='s')//this statement for use with tera term 
 //for(;;)
-
+ 
 
 
   while(1)//stay in an endless loop while taking data
   //order of opperations -> wait for event to be set ->get buffer, turn on sensors and SD card -> take data -> turn off sensors and SD card
     {
         //put piezo wait event here 
+        int mmcReturnValue;
         unsigned checking_for_launch;
-        int checking_launch=1;
+        int check_for_free_address;
+       
+        int checking_launch;
+        LEDL_TEST_LAUNCH *launch_detect_data;//call variables by calling launch_detect_data.dat.detect_dat.SDaddress
+         //this gets started after I begin taking data and stops when I am finished taking data, this is done here to prevent the SD card lines from turning on and off from main 
+          //check to see if launch has happened previously
+          //first i have to turn on the regulator followed by everything else to make sd card work
+           //turn up the voltage
+          VREGon();
+          //need to have a setteling time for the voltage regulator
+          //then initalize the 16 Mhz clock 
+          ctl_timeout_wait(ctl_get_current_time()+100);//4.88 MS IS 5
+          //get buffer to use sd card
+          buffer=BUS_get_buffer(CTL_TIMEOUT_DELAY,2048);
+          if (buffer==NULL){
+          printf("unable to use bus buffer \r\n");
+          return;
+          }//closes if(buffer==NULL) statement
+          //make the structer launch_detect_data point to the buffer
+          launch_detect_data=(LEDL_TEST_LAUNCH*)buffer;
+          //turn on sensors here 
+          //have to turn on the SD card to check this out first
+
+          SENSORSon();//turn on sensor
+          mmc_pins_on();
+          mmcReturnValue=mmcInit_card();
+          if (mmcReturnValue==MMC_SUCCESS){
+            printf("\rCard initalized Sucessfully\r\n");
+            result=mmcReadBlock(0,(unsigned char*)buffer);
+            startup_mode=launch_detect_data->dat.detect_dat.mode_status;
+            }
+          else {
+          printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
+      
+               } 
+           
+          //read data from SD card to determine mode
+          
+          //give mode status to variable to look at now and later 
+          
+        
+            
+            //if mode is launch mode, than find free data space 
+            if(startup_mode==MODE_LAUNCH)
+            {//search for first spot
+              check_for_free_address=1;
+              SDaddr=launch_detect_data->dat.detect_dat.SD_last_address;
+               LED_1_ON();
+               ctl_timeout_wait(ctl_get_current_time()+500);//4.88 MS IS 5
+               while(check_for_free_address)
+                {
+               result=mmcReadBlock(SDaddr,(unsigned char*)buffer);
+               //check to see if current sd card address is equal to the input LEDL_DATA_ID
+                  if((buffer[0]==LEDL_DATA_ID)||(launch_detect_data->ledl_address==LEDL_DETECT_ID))
+                  {
+                  //this value starts at 65 and begins looking for a free spot in memory 
+                  SDaddr++;
+                  LED_2_ON();
+                  ctl_timeout_wait(ctl_get_current_time()+500);//4.88 MS IS 5
+                  LED_2_OFF();
+                  }
+                  else
+                  {
+                  int checking_launch=1;
+                  check_for_free_address=0;
+                  LED_1_OFF();
+                  //have data start, by acting like interrput has first happened
+                  ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
+                  switch_is_on=1; 
+                                
+                  }
+                }
+            }
+            else
+            {//we turned on sd card to check for launch, now it needs to be turned back off since the system determined there was not a launch
+                if(P1IN&BIT0)
+                {
+                //in obrit mode do not turn off sd card stuff 
+                //TURN REGULATOR OFF 
+                VREGoff();
+                BUS_free_buffer();
+                }
+                 else{
+                 mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+                 SENSORSoff();
+                 BUS_free_buffer();
+                 initCLK_lv();//Reduce clock speed for low voltage application
+                 VREGoff();//turn Voltage regulator off for low power application
+                 WDT_STOP();
+                }
+             
+            }
+         
+       
+        //Code that checks the launch detect
         checking_for_launch=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_LaunchDetect,(1<<0),CTL_TIMEOUT_NONE,0);
-        while(checking_for_launch&(0x01))
+        if(checking_for_launch&(0x01))
         //if(checking_for_launch&LAUNCH_DETECT_FLAG)
         {
           int mmcReturnValue;
           unsigned e;
-          float checkacc[6],xavg,yavg,zavg;
+          float checkacc[6],xavg,yavg,zavg,maxx,maxy,maxz,minx,miny,minz;
           float totalacc;
-          unsigned int data;
-          int i=0,accel_count_for_launch_test=0;
-
-          float acc18gconversion = 0.057; // volts per g
-          float adcconversion = 0.0008057; // volts per adc reference 0 to 4096
-          float go_launch_value=0.00731;//this value is when a launch occures 0.0855^2
+          unsigned int data,accel_count_for_launch_test;
+          int i=0;
+          long temperory_SDaddr;
+          float acc18gconversionx = 0.0625; // volts per g
+          float acc18gconversiony = 0.0633;
+          float acc18gconversionz = 0.0633;
+          float adcconversion = 0.0008057; // volts per adc reference 0 to 4096 for 3.3 V source 
+          float go_launch_value=0.0156;//this value is when a launch occures 0.0855^2
+          LEDL_TEST_LAUNCH *launch_detect_data;//call variables by calling launch_detect_data.dat.detect_dat.SDaddress
+          wake_up_attempt++;//increase the wake up attempt
          //turn up the voltage
           VREGon();
       
           //need to have a setteling time for the voltage regulator
           //then initalize the 16 Mhz clock 
-          ctl_timeout_wait(ctl_get_current_time()+5);//4.88 MS
-          SENSORSon();//turn on sensors
-     
+          ctl_timeout_wait(ctl_get_current_time()+100);//4.88 MS IS 5
+        
           buffer=BUS_get_buffer(CTL_TIMEOUT_DELAY,2048);
 
           if (buffer==NULL){
@@ -175,13 +275,12 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           launch_data1=(int*)buffer;
           launch_data2=(int*)(buffer+512);
           launch_data=(int*)launch_data1;
+          launch_detect_data=(LEDL_TEST_LAUNCH*)buffer;
           //turn on sensors here 
           ACCon();//turn on acclerometers 
+          ctl_timeout_wait(ctl_get_current_time()+300);//4.88 MS IS 5
           GyroWakeUp();
-      
-          //initalize the SD card   
-          ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
-
+          SENSORSon();//turn on sensors
           mmc_pins_on();
           mmcReturnValue=mmcInit_card();
           if (mmcReturnValue==MMC_SUCCESS){
@@ -191,327 +290,448 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
       
           }
-          ctl_task_run(&SD_card,BUS_PRI_EXTRA_HIGH,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
-          //this gets started after I begin taking data and stops when I am finished taking data, this is done here to prevent the SD card lines from turning on and off from main 
-         initCLK();
-         
+                     
+            
+      
+          //initalize the SD card   
+          ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
 
+          initCLK();
+          
+          ADC12CTL0|=ADC12SC;//need another comment 
               //check to see if there is launch 
-              
-              e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_adc,(1<<0),CTL_TIMEOUT_NONE,0);
-                    if(e&(0x01))
+               for(accel_count_for_launch_test=0;accel_count_for_launch_test<4100;++accel_count_for_launch_test)
                     {
-
-                    while(checking_launch)
-                    {
-                       volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0, checks adc register 
-                       
-           
-                          for (i=0; i<6; ++i)// look at first 6 adc measurements of acceleration  
-                          {
-                            checkacc[i]=arr[i];
-                            //data is represented as a number from 0 to 4096 ( 0 V to 3.3 V), 0.0008057; volts per adc reference 0 to 4096
-                            //a voltage conversion for the accelerometers
-                            //   ADXL321 18 g accelerometer   57.0 mV per g 
-                            //   ADXL001 70 g accelerometer   16 mV per g
-                            checkacc[i]*=adcconversion;
-                            checkacc[i]-=1.65;
-                            checkacc[i]=fabsf(checkacc[i]);
-                  
-                          }
-                            accel_count_for_launch_test++;
-                            if (accel_count_for_launch_test==1)
+                      e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_adc,(1<<0),CTL_TIMEOUT_NONE,0);
+                            if(e&(0x01))
                             {
-                            xavg=checkacc[5];//keep a running average on the samples
-                       //     printf("Xavg = %f",xavg);
-                            yavg=checkacc[4];//keep a running average on the samples
-                       //     printf("Yavg = %f",yavg);
-                            zavg=checkacc[3];//keep a running average on the samples. 
-                        //    printf("Zavg = %f",zavg);
-                            }
-                            else
-                            {
-                            xavg=(xavg+checkacc[5])/2;//keep a running average on the samples
-                           // printf("Xavg = %f",xavg);
-                            yavg=(xavg+checkacc[4])/2;//keep a running average on the samples 
-                           // printf("Yavg = %f",yavg);
-                            zavg=(xavg+checkacc[3])/2;//keep a running average on the samples. 
-                          //  printf("Zavg = %f",zavg);
-                          //kick watchdog
-                          WDT_KICK();
-                            if (accel_count_for_launch_test==4100)
-                              { 
-                                printf("Xavg = %f",xavg);
-                                printf("Yavg = %f",yavg);
-                                printf("Zavg = %f",zavg);
-                                totalacc=xavg*xavg+yavg*yavg+zavg*zavg;//find the total squared acceleration vector
-                                  if (totalacc>go_launch_value)
+                            
+                               volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0, checks adc register 
+                                  LED_3_ON();
+                                  
+                                  for (i=0; i<6; ++i)// look at first 6 adc measurements of acceleration  
                                   {
-                                  //confirmed launch
-                                  //begin logging data
-                                   switch_is_on=1; 
-                                   checking_launch=0;
-                                   printf("WE HAVE LAUNCH");
-                                   accel_count_for_launch_test=0;
-                                   P4OUT^=BIT5;
-                               
-                                   ctl_events_set_clear(&handle_LaunchData,LaunchData_flag,0);//this should start the data logging
-                                  }
-                                  else{
-                                  //go back to sleep 
-                                  checking_launch=0;
-                                  printf("NO Launch, return to sleep");
-                                  accel_count_for_launch_test=0;
-                                  }
-                              }
-                              
-                            }
-                    }
-                  }  
-       event1=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_LaunchData,LaunchData_flag,CTL_TIMEOUT_NONE,0);
-        if(event1&(LaunchData_flag))
-        {
-       //ctl_events_set_clear(&handle_LaunchData,0, LaunchData_flag);
-        while(switch_is_on)//this statement is for use with external switch
-        {
-          unsigned e;
-          e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_adc,(1<<0),CTL_TIMEOUT_NONE,0);
-            if(e&(0x01))
-            {
-              volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0
-              //if (handle_adc)//in adc interrupt handle_adc is set high, so this code become initialized
-              //handle_adc = 0;//reset my personal flag to zero //I do not use this with events
-                  //LAUNCH_LED_ON(); //LIGHT UP LED WHEN TAKING DATA 
-                  if (data==0)
-                  {
-                  launch_data[data]=LEDL_ID;
-                  data++;
-                  launch_data[data]=SDaddr;
-                  data++;
-                  }
-                  if (accel_count==0)// only when accel_count=0 will the row number be displayed
-                  {
-                  //printf("%d\t", row);//prints row number
-                  launch_data[data]=frame;
-                  data++;
-                  launch_data[data]=row;
-                  data++;
-                  row++;//add count to rows this is also SFID
-                  } //closes if(accel_count==0)
-              
-                    for (i=0; i<6; ++i)// print first 6 adc measurements  
+                                    checkacc[i]=arr[i];
+                                    //data is represented as a number from 0 to 4096 ( 0 V to 3.3 V), 0.0008057; volts per adc reference 0 to 4096
+                                    //a voltage conversion for the accelerometers
+                                    //   ADXL321 18 g accelerometer   57.0 mV per g 
+                                    //   ADXL001 70 g accelerometer   16 mV per g
+                                    checkacc[i]*=adcconversion;
+                                    if(i==3)
+                                    {//zaxis 
+                                    checkacc[i]-=1.6623;//should be average Z axis 
+                                    checkacc[i]=fabsf(checkacc[i]);
+                                    }
+                                    else if (i==4)
+                                    {//yaxis 
+                                    checkacc[i]-=1.6735;//should be average Y axis 
+                                    checkacc[i]=fabsf(checkacc[i]);
+                                    }
+                                    else if (i==5)
+                                    {//xaxis 
+                                    checkacc[i]-=1.6683;//should be average X axis
+                                    checkacc[i]=fabsf(checkacc[i]);
+                                    }
+                                    else
+                                    {/*do nothing with other data*/}
+                                    
+                                  }//closes for loop for taking accelerometer data
+                                    if (accel_count_for_launch_test==1)
+                                    {
+                                    xavg=checkacc[5];//keep a running average on the samples
+                                    maxx=checkacc[5];
+                                    minx=checkacc[5];
+                               //     printf("Xavg = %f",xavg);
+                                    yavg=checkacc[4];//keep a running average on the samples
+                                    maxy=checkacc[4];
+                                    miny=checkacc[4];
+                               //     printf("Yavg = %f",yavg);
+                                    zavg=checkacc[3];//keep a running average on the samples. 
+                                    maxz=checkacc[3];
+                                    minz=checkacc[3];
+                                //    printf("Zavg = %f",zavg);
+                                    }//closes if statment for accel_count_for_test
+                                    else
+                                    {
+                                      xavg=(xavg+checkacc[5])/2;//keep a running average on the samples
+                                        if(checkacc[5]>maxx)
+                                        {
+                                        maxx=checkacc[5];
+                                        }
+                                        else
+                                        {
+                                        minx=checkacc[5];
+                                        }
+                                      // printf("Xavg = %f",xavg);
+                                      yavg=(yavg+checkacc[4])/2;//keep a running average on the samples
+                                        if(checkacc[4]>maxy)
+                                        {
+                                        maxy=checkacc[4];
+                                        }
+                                        else
+                                        {
+                                        miny=checkacc[4];
+                                        }
+                                      // printf("Yavg = %f",yavg);
+                                      zavg=(zavg+checkacc[3])/2;//keep a running average on the samples.
+                                        if(checkacc[3]>maxz)
+                                        {
+                                        maxz=checkacc[3];
+                                        }
+                                        else
+                                        {
+                                        minz=checkacc[3];
+                                        }
+                                      //  printf("Zavg = %f",zavg);
+                                      //kick watchdog
+                                      WDT_KICK();
+                                    }//closes else for accelcount>1 but still less than 4100
+                            }//closes wait for adc to trigger 
+                    }//finishes counting to 4100 to take all data
+                  
+          printf("Xavg = %f",xavg);
+          printf("Yavg = %f",yavg);
+          printf("Zavg = %f",zavg);
+          totalacc=xavg*xavg+yavg*yavg+zavg*zavg;//find the total squared acceleration vector
+          // store launch results to SD card
+          launch_detect_data->ledl_address=LEDL_DETECT_ID;
+          launch_detect_data->dat.detect_dat.SDaddress=SDaddr;
+          launch_detect_data->dat.detect_dat.SD_last_address=SDaddr;
+          launch_detect_data->dat.detect_dat.accel_from_launch[0]=xavg;
+          launch_detect_data->dat.detect_dat.accel_from_launch[1]=yavg;
+          launch_detect_data->dat.detect_dat.accel_from_launch[2]=zavg;
+          launch_detect_data->dat.detect_dat.accel_from_launch[3]=totalacc;
+          launch_detect_data->dat.detect_dat.number_of_detect=wake_up_attempt;
+          launch_detect_data->dat.detect_dat.max_and_min_from_launch[0]=maxx;
+          launch_detect_data->dat.detect_dat.max_and_min_from_launch[1]=minx;
+          launch_detect_data->dat.detect_dat.max_and_min_from_launch[2]=maxy;
+          launch_detect_data->dat.detect_dat.max_and_min_from_launch[3]=miny;
+          launch_detect_data->dat.detect_dat.max_and_min_from_launch[4]=maxz;
+          launch_detect_data->dat.detect_dat.max_and_min_from_launch[5]=minz;
+          
+
+          crc_check=crc16(launch_data,510);                          
+          launch_detect_data->crc=crc_check;//put crc in last spot of data
+
+              if(startup_mode==MODE_DETECT)
+                {
+                  if (totalacc>go_launch_value)
                      {
-                      //printf("%d\t", arr[i]);
-                      launch_data[data]=arr[i];
-                      data++;
-                      accel_count++;//add a count to accel_count,
-                     }  //closes for (i=0; i<6; ++i)// print first 6 adc measurements
+                     //confirmed launch
+                     //begin logging data
+                      startup_mode=MODE_LAUNCH;
+                      launch_detect_data->dat.detect_dat.mode_status=startup_mode;
+                      data=0;
+                      switch_is_on=1; 
+                      checking_launch=0;
+                      printf("WE HAVE LAUNCH");
+                      accel_count_for_launch_test=0;
+                      result = mmcWriteBlock(SDaddr, (unsigned char*) launch_data); //(unsigned char*) casting my pointer(array) as a char 
+                      launch_detect_data->dat.detect_dat.SDaddress=0;//since we are storing this in location zero, the address should say zero 
+                      result = mmcWriteBlock(0,(unsigned char*) launch_data);//store that launch happened in the first spot
+                      SDaddr+=1;//memory card is block address
+                      P4OUT^=BIT5; 
+                     }
+                  else{
+                      //go back to sleep 
+                      checking_launch=0;
+                      launch_detect_data->dat.detect_dat.mode_status=startup_mode;
+                      data=0;
+                      printf("NO Launch, return to sleep");
+                      accel_count_for_launch_test=0;
+                      result = mmcWriteBlock(SDaddr,(unsigned char*) launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
+                      SDaddr+=1;//memory card is block address
+                      LED_3_OFF();
+                      ACCoff();
+                      GyroSleep();
+                      mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+                      SENSORSoff();
+                      BUS_free_buffer();
+                      initCLK_lv();//Reduce clock speed for low voltage application
+                      VREGoff();//turn Voltage regulator off for low power application
+                      WDT_STOP();
+                      continue;
+                      }//closes else for determining launch has not happened
+                    }//closes if checking mode if statment
+                  else{
+                  //if the LEDL resets for some reason, when it comes back on and sees that launch has actually happened than it will restore the last number used by the data
+                  //logger and restores it in the first data location for later use in packets, this will again be updated by the 
+                      data=0;
+                      switch_is_on=1; 
+                      checking_launch=0;
+                      printf("WE HAVE LAUNCH");
+                      accel_count_for_launch_test=0;
+                      result = mmcWriteBlock(SDaddr, (unsigned char*) launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
+                      result = mmcWriteBlock(0,(unsigned char*) launch_detect_data);//store that launch happened in the first spot
+                      SDaddr+=1;//memory card is block address
+                      P4OUT^=BIT5; 
+                      }//closes else, launch has been verified before it died for some reason, the code will pick up where it left off in the count.   
+          ctl_task_run(&SD_card,BUS_PRI_EXTRA_HIGH,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
+
+          while(switch_is_on)//this statement is for use with external switch
+          {
+            unsigned e;
+            e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_adc,(1<<0),CTL_TIMEOUT_NONE,0);
+              if(e&(0x01))
+              {
+                volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0
+                //if (handle_adc)//in adc interrupt handle_adc is set high, so this code become initialized
+                //handle_adc = 0;//reset my personal flag to zero //I do not use this with events
+                    //LAUNCH_LED_ON(); //LIGHT UP LED WHEN TAKING DATA 
+                    if (data==0)
+                    {
+                    launch_data[data]=LEDL_DATA_ID;
+                    data++;
+                    temperory_SDaddr=SDaddr;
+                    launch_data[data]=temperory_SDaddr;
+                    data++;
+                    launch_data[data]=temperory_SDaddr>>16;
+                    data++;
+
+                    }
+                    if (accel_count==0)// only when accel_count=0 will the row number be displayed
+                    {
+                    //printf("%d\t", row);//prints row number
+                    launch_data[data]=frame;
+                    data++;
+                    launch_data[data]=row;
+                    data++;
+                    row++;//add count to rows this is also SFID
+                    } //closes if(accel_count==0)
               
-                      if (accel_count==24)// when accel_count is 24 it print last two columns
-                      {
-                      switch (gyro_count)
-                          {
-                          case 0:
-                                 //printf("%d(G1)\t", arr[6]);
-                                 launch_data[data]=arr[6];
-                                 data++;
-                                 gyro_count++;
-                                 break;
-                          case 1:
-                                 //printf("%d(G2)\t", arr[7]);
-                                 launch_data[data]=arr[7];
-                                 data++;
-                                 gyro_count++;
-                                 GyroMuxon();//selecting G3 on mux for next pass
-                                 //GyroSelfTeston();//turning on ST to see if there is a change
-                                 break;
-                          case 2:
-                                 //printf("%d(G3)\t", arr[7]);
-                                 launch_data[data]=arr[7];
-                                 data++;
-                                 gyro_count=0;
-                                 GyroMuxoff();;//selecting G2 on mux for next pass
-                                // GyroSelfTestoff();//turning off the self test to see if there is a change 
-                                 break;
-                          }//closes switch (gyro_count)
+                      for (i=0; i<6; ++i)// print first 6 adc measurements  
+                       {
+                        //printf("%d\t", arr[i]);
+                        launch_data[data]=arr[i];
+                        data++;
+                        accel_count++;//add a count to accel_count,
+                       }  //closes for (i=0; i<6; ++i)// print first 6 adc measurements
+              
+                        if (accel_count==24)// when accel_count is 24 it print last two columns
+                        {
+                        switch (gyro_count)
+                            {
+                            case 0:
+                                   //printf("%d(G1)\t", arr[6]);
+                                   launch_data[data]=arr[6];
+                                   data++;
+                                   gyro_count++;
+                                   break;
+                            case 1:
+                                   //printf("%d(G2)\t", arr[7]);
+                                   launch_data[data]=arr[7];
+                                   data++;
+                                   gyro_count++;
+                                   GyroMuxon();//selecting G3 on mux for next pass
+                                   //GyroSelfTeston();//turning on ST to see if there is a change
+                                   break;
+                            case 2:
+                                   //printf("%d(G3)\t", arr[7]);
+                                   launch_data[data]=arr[7];
+                                   data++;
+                                   gyro_count=0;
+                                   GyroMuxoff();;//selecting G2 on mux for next pass
+                                  // GyroSelfTestoff();//turning off the self test to see if there is a change 
+                                   break;
+                            }//closes switch (gyro_count)
    
            
-                            switch (temp_display)
-                                {
+                              switch (temp_display)
+                                  {
 
 
-                                case 0: 
-                                  if (frame_100==100)
-                                  {
-                                 // Temp_I2C_sensor(temp_measure);//here is the first temperature measurement passing an array 7 length long //at some point I will need to measure temperature sensors as a 
-                                  //different task so that as I am waiting for the the return values I can be taking my other measurements. 
-                                  //printf("%d\t",temp_measure[0]);//this is the spot for temperature data
-                                  launch_data[data]=temp_measure[0];
-                                  data++;
-                                  }//closes if (frame_100==100)
-                                  else if (frame_100==0)
-                                  {
-                                  ctl_events_set_clear(&handle_get_I2C_data,I2C_EV_GET_DATA,0);  
-                                  data++;
-                                  }//closes else if (frame_100==0)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  }//closes else
-                                  temp_display++;
-                                  break;
-                                case 1:
-                                  if (frame_100==100)
-                                  {
-                                  //printf("%d\t",temp_measure[1]);//this is the spot for temperature data
-                                  launch_data[data]=temp_measure[1];
-                                  data++;
-                                  }// closes if (frame_100==100)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  }//closes else 
-                                  temp_display++;
-                                  break;
-                                case 2:
-                                  if (frame_100==100)
-                                  {
-                                  //printf("%d\t",temp_measure[2]);//this is the spot for temperature data
-                                  launch_data[data]=temp_measure[2];
-                                  data++;
-                                  }//closes if (frame_100==100)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  }//closes else 
-                                  temp_display++;
-                                  break;
-                                case 3:
-                                  if (frame_100==100)
-                                  {
-                                  //printf("%d\t",temp_measure[3]);//this is the spot for temperature data
-                                  launch_data[data]=temp_measure[3];
-                                  data++;
-                                  }//closes if (frame_100==100)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  }//closes else
-                                  temp_display++;
-                                  break;
-                                case 4:
-                                  if (frame_100==100)
-                                  {
-                                  //printf("%d\t",temp_measure[4]);//this is the spot for temperature data
-                                  launch_data[data]=temp_measure[4];
-                                  data++;
-                                  }//closes if (frame_100==100)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  }//closes else
-                                  temp_display++;
-                                  break;
-                                case 5:
-                                  if (frame_100==100)
-                                  {
-                                  //printf("%d\t",temp_measure[5]);//this is the spot for temperature data
-                                  launch_data[data]=temp_measure[5];
-                                  data++;
-                                  }//closes if (frame_100==100)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  }//closes else
-                                  temp_display++;
-                                  break;
-                                case 6:
-                                  if (frame_100==100)
-                                  {
-                                 //printf("%d\t",temp_measure[6]);//this is the spot for temperature data
-                                 launch_data[data]=temp_measure[6];
-                                  data++;
-                                  frame_100=0;
-                                  }// closes if (frame_100==100)
-                                  else
-                                  {
-                                  //printf("0000\t");
-                                  launch_data[data]=0000;
-                                  data++;
-                                  frame_100++;
-                                  }//closes else 
-                                  temp_display++;
-                                  break;
-                                case 7:
-                                  ticker_time=get_ticker_time();                 
-                                  time2=ticker_time;
-                                  time1=ticker_time>>16;
+                                  case 0: 
+                                    if (frame_100==100)
+                                    {
+                                   // Temp_I2C_sensor(temp_measure);//here is the first temperature measurement passing an array 7 length long //at some point I will need to measure temperature sensors as a 
+                                    //different task so that as I am waiting for the the return values I can be taking my other measurements. 
+                                    //printf("%d\t",temp_measure[0]);//this is the spot for temperature data
+                                    launch_data[data]=temp_measure[0];
+                                    data++;
+                                    }//closes if (frame_100==100)
+                                    else if (frame_100==0)
+                                    {
+                                    ctl_events_set_clear(&handle_get_I2C_data,I2C_EV_GET_DATA,0);  
+                                    data++;
+                                    }//closes else if (frame_100==0)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    }//closes else
+                                    temp_display++;
+                                    break;
+                                  case 1:
+                                    if (frame_100==100)
+                                    {
+                                    //printf("%d\t",temp_measure[1]);//this is the spot for temperature data
+                                    launch_data[data]=temp_measure[1];
+                                    data++;
+                                    }// closes if (frame_100==100)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    }//closes else 
+                                    temp_display++;
+                                    break;
+                                  case 2:
+                                    if (frame_100==100)
+                                    {
+                                    //printf("%d\t",temp_measure[2]);//this is the spot for temperature data
+                                    launch_data[data]=temp_measure[2];
+                                    data++;
+                                    }//closes if (frame_100==100)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    }//closes else 
+                                    temp_display++;
+                                    break;
+                                  case 3:
+                                    if (frame_100==100)
+                                    {
+                                    //printf("%d\t",temp_measure[3]);//this is the spot for temperature data
+                                    launch_data[data]=temp_measure[3];
+                                    data++;
+                                    }//closes if (frame_100==100)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    }//closes else
+                                    temp_display++;
+                                    break;
+                                  case 4:
+                                    if (frame_100==100)
+                                    {
+                                    //printf("%d\t",temp_measure[4]);//this is the spot for temperature data
+                                    launch_data[data]=temp_measure[4];
+                                    data++;
+                                    }//closes if (frame_100==100)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    }//closes else
+                                    temp_display++;
+                                    break;
+                                  case 5:
+                                    if (frame_100==100)
+                                    {
+                                    //printf("%d\t",temp_measure[5]);//this is the spot for temperature data
+                                    launch_data[data]=temp_measure[5];
+                                    data++;
+                                    }//closes if (frame_100==100)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    }//closes else
+                                    temp_display++;
+                                    break;
+                                  case 6:
+                                    if (frame_100==100)
+                                    {
+                                   //printf("%d\t",temp_measure[6]);//this is the spot for temperature data
+                                   launch_data[data]=temp_measure[6];
+                                    data++;
+                                    frame_100=0;
+                                    }// closes if (frame_100==100)
+                                    else
+                                    {
+                                    //printf("0000\t");
+                                    launch_data[data]=0000;
+                                    data++;
+                                    frame_100++;
+                                    }//closes else 
+                                    temp_display++;
+                                    break;
+                                  case 7:
+                                    ticker_time=get_ticker_time();                 
+                                    time2=ticker_time;
+                                    time1=ticker_time>>16;
 
-                                  //printf("%u\t",time1);//this is the spot for time1 data
-                                  launch_data[data]=time1;
-                                  data++;
-                                  temp_display++;
-                                  break;
-                                case 8: 
-                                  //printf("%u\t",time2);
-                                  launch_data[data]=time2;
-                                  data++;
-                                  crc_check=crc16(launch_data,510);
-                                  launch_data[255]=crc_check;//put crc in last spot of data
-                                  frame++;
-                                  data=0;
-                                  if (launch_data==launch_data1)
-                                  {
-                                  ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_1,0);
-                                  launch_data=launch_data2;
-                                  }//closes if(launch_data==launch_data1)
-                                  else 
-                                  {
-                                  launch_data=launch_data1;
-                                  ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_2,0);  
-                                  }//closes else                         
-                                  temp_display=0;
-                                 break; 
-                                  //add a count for incrementing frame number
-                                }//closes switch (temp_display) 
+                                    //printf("%u\t",time1);//this is the spot for time1 data
+                                    launch_data[data]=time1;
+                                    data++;
+                                    temp_display++;
+                                    break;
+                                  case 8: 
+                                    //printf("%u\t",time2);
+                                    launch_data[data]=time2;
+                                    data++;
+                                    crc_check=crc16(launch_data,510);
+                                    launch_data[255]=crc_check;//put crc in last spot of data
+                                    frame++;
+                                    data=0;
+                                    if (launch_data==launch_data1)
+                                    {
+                                    ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_1,0);
+                                    launch_data=launch_data2;
+                                    }//closes if(launch_data==launch_data1)
+                                    else 
+                                    {
+                                    launch_data=launch_data1;
+                                    ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_2,0);  
+                                    }//closes else                         
+                                    temp_display=0;
+                                   break; 
+                                    //add a count for incrementing frame number
+                                  }//closes switch (temp_display) 
                         
-                            //printf("\r\n");
-                            accel_count=0;
-                       }//closes  if (accel_count==24)
-                     }//closes  if(e&(0x01))
+                              //printf("\r\n");
+                              accel_count=0;
+                         }//closes  if (accel_count==24)
+                       }//closes  if(e&(0x01))
          
-                 }//closes while(switch_is_on==1) 
-               // printf("%d/t",launch_data);
-              //turn off sensors here if this is where the empty while loop 
-           //LAUNCH_LED_OFF(); //Turn off LED that shows data is no longer taking data 
-           frame=0;
-           ACCoff();
-           GyroSleep();
-           ctl_events_set_clear(&handle_SDcard,SD_EV_DIE,0);//this sends the flag to allow for the SD card to shut down 
-           ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_FINISHED,CTL_TIMEOUT_NONE,0);//this waits for SD card to finish writing the last block so that it can shutdown 
-           mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
-           SENSORSoff();
-           BUS_free_buffer();
-           initCLK_lv();//Reduce clock speed for low voltage application
-           VREGoff();//turn Voltage regulator off for low power application
-           WDT_STOP();
-           //printf("TEST POINT");//this is the spot for temperature data
+                   }//closes while(switch_is_on==1) 
+                 // printf("%d/t",launch_data);
+                //turn off sensors here if this is where the empty while loop 
+             //LAUNCH_LED_OFF(); //Turn off LED that shows data is no longer taking data 
+             //before everything gets turned off, store the number of sd card sectors used and the last address stored 
+             launch_detect_data->ledl_address=LEDL_DETECT_ID;
+             launch_detect_data->dat.detect_dat.SDaddress=SDaddr;
+             launch_detect_data->dat.detect_dat.SD_last_address=SDaddr;
+             launch_detect_data->dat.detect_dat.accel_from_launch[0]=0;
+             launch_detect_data->dat.detect_dat.accel_from_launch[1]=0;
+             launch_detect_data->dat.detect_dat.accel_from_launch[2]=0;
+             launch_detect_data->dat.detect_dat.accel_from_launch[3]=0;
+             launch_detect_data->dat.detect_dat.max_and_min_from_launch[0]=0;
+             launch_detect_data->dat.detect_dat.max_and_min_from_launch[1]=0;
+             launch_detect_data->dat.detect_dat.max_and_min_from_launch[2]=0;
+             launch_detect_data->dat.detect_dat.max_and_min_from_launch[3]=0;
+             launch_detect_data->dat.detect_dat.max_and_min_from_launch[4]=0;
+             launch_detect_data->dat.detect_dat.max_and_min_from_launch[5]=0;
+             launch_detect_data->dat.detect_dat.number_of_detect=wake_up_attempt;
+             launch_detect_data->dat.detect_dat.mode_status=MODE_ORBIT;
+             crc_check=crc16(launch_data,510);                          
+             launch_detect_data->crc=crc_check;//put crc in last spot of data
+             result = mmcWriteBlock(0,(unsigned char*) &launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
 
-          }//closes  if(event1&(LaunchData_flag))
-      }//closes  
-  }//closes  while(1)
+             frame=0;
+             ACCoff();
+             GyroSleep();
+             ctl_events_set_clear(&handle_SDcard,SD_EV_DIE,0);//this sends the flag to allow for the SD card to shut down 
+             ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_FINISHED,CTL_TIMEOUT_NONE,0);//this waits for SD card to finish writing the last block so that it can shutdown 
+             mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
+             SENSORSoff();
+             BUS_free_buffer();
+             initCLK_lv();//Reduce clock speed for low voltage application
+             VREGoff();//turn Voltage regulator off for low power application
+             WDT_STOP();
+             //printf("TEST POINT");//this is the spot for temperature data
+
+         
+          }//closes checking for launch 
+    }//closes  while(1)
          
 }//closes function  launch_data_log(void *p)
   
@@ -522,7 +742,7 @@ void writedatatoSDcard(void)
   unsigned countforLED=0; 
   unsigned long SD_card_write_time;
   unsigned SD_card_write;
-  int result;
+  
   
   for(;;){//I may want to add code that looks for a new spot to put data if there is data in code(SD card code). 
       SD_card_write=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_ALL,CTL_TIMEOUT_NONE,0);//the 7 means your looking at all 3 flags 

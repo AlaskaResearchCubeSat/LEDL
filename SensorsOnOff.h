@@ -27,6 +27,12 @@ void LEDL_SWITCH_TO_EPS(void);
 void LEDL_BLOW_FUSE(void);
 void GyroSleep(void);
 void GyroWakeUp(void);
-
+void LED_3_ON(void);
+void LED_3_OFF(void);
+void LED_2_ON(void);
+void LED_2_OFF(void);
+void LED_1_ON(void);
+void LED_1_OFF(void);
+void GyroOff(void);
 
  #endif

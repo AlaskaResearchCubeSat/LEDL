@@ -23,7 +23,7 @@ void setup_launch_detect(void){
   //ctl_events_init(&handle_LaunchDetect, 0);//this is when we use the launchDetect Algorithim 
   ctl_events_init(&handle_LaunchData, 0);//this is for use with EMI testing, for actual satellite mission this will be set after the verification of there being a positive launch 
  //this is here for testing until i can figure out what is going on with Port 1 interrupt
- ctl_events_init(&handle_OrbitData, 0);//this is for use when satellite makes it to orbit-
+ //ctl_events_init(&handle_OrbitData, 0);//this is for use when satellite makes it to orbit-
  P2DIR &= ~(BIT7|BIT6);//TURNS ONLY P2.7 and P2.6 as an input
  P2IES |=  BIT7;//sets up interrupt to be a high to low transition
  P2IES &= ~BIT6;// sets up interrupt to be a low to high transition

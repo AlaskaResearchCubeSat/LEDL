@@ -61,7 +61,9 @@ void main(void){
 ARC_setup_lv();//sets up initializes the clocks and should be called at the beginning of main
 //initCLK();//this is now set up in ARC_setup 
 //Initialize the uart to talk with terra term 
-
+P4DIR |= BIT1|BIT2|BIT3|BIT5|BIT6|BIT7;//LIGHT UP LED'S AS OUTPUTS 
+P4OUT &= ~(BIT1|BIT2|BIT3|BIT5|BIT6|BIT7);
+P4OUT |= BIT5;
 VREGinit();//INITALIZE THE VOLTAGE REGULATOR 
 //initUART();//initalize when using TxChar(ch)
 //setup I2C for use of UCB1 
@@ -71,17 +73,17 @@ initI2C();
 init_timerA(); // some of the set up is now started in ARC_setup 
 mmcInit_msp();
 
+
 setup_launch_detect();
+_mmc_pins_off();
 //setup_orbit_start();
 UnusedPinSetup();//drive all unused pins to outputs 
+GyroOff();
 SENSORSoff();
-Gyroinit();
 MAGoff();
 ACCoff();
 RESET_LED();
 
-P4DIR |= BIT1|BIT2|BIT3|BIT5|BIT6|BIT7;//LIGHT UP LED'S AS OUTPUTS 
-P4OUT &= ~(BIT1|BIT2|BIT3|BIT5|BIT6|BIT7);
 
 //Initialize the main task 
 initARCbus(BUS_ADDR_LEDL);

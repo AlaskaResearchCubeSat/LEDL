@@ -20,7 +20,8 @@
 #define REG_TEMP_OIT      0x03
 
 // Define Clyde Board Address
-#define clyde_sensors     0x01
+#define clyde_sensors     0x2D//this is for the new clyde 
+//#define clyde_sensors    0x01//this is for the old clyde
 
 
 ////////using the old clyde user guide for the following addresses, assumming Y1 is Y+ and Y2 is Y-, new eps has pair votlage, i am just choosing + side voltage 

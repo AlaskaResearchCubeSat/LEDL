@@ -14,6 +14,9 @@
   P7OUT &= ~BIT7;//TURNS ONLY P7.7 0FF (signal is applied to a PMOS gate, being low makes it active, providing voltage to sensors)
 //  P4DIR |= BIT2;//lED are an output
  // P4OUT |= BIT2;//LED TURNS ON TO INDICATE SENSORS ARE ACTIVE
+  
+   ctl_timeout_wait(ctl_get_current_time()+100);//~about 100 MS
+   P7REN &=~BIT7;
   /*
    printf("When finished taking voltage measurment for sensor on press the space bar to continue.\r\n");
     while(checksensors!=' '){//continues to check to see if the space bar was hit.  
@@ -26,6 +29,7 @@
  void SENSORSoff(void){
  int checksensors; 
   P7DIR |= BIT7;//TURNS ONLY P7.7 On (signal is applied to a PMOS gate, being high makes it turn off, cutting voltage)
+  P7REN |= BIT7;
   P7OUT |= BIT7;//TURNS ONLY P7.7 On (signal is applied to a PMOS gate, being high makes it turn off, cutting voltage)
  // P4DIR |= BIT2;//lED are and output 
  // P4OUT &= ~BIT2;//lED TURNS OFF TO INDICATE SENSORS ARE OFF
@@ -56,7 +60,9 @@
 
  void ACCoff(void){
  int checksensors; 
+
   P8DIR |= BIT6;//TURNS ONLY P8.6 On (signal is applied to a PMOS gate, being high makes it turn off, cutting voltage)
+  P8REN |= BIT6;//USES THE INTERNAL RESISTOR TO REDUCE THE CURRENT 
   P8OUT |= BIT6;//TURNS ONLY P8.6 On (signal is applied to a PMOS gate, being high makes it turn off, cutting voltage)
  // P4DIR |= BIT3;//lED is an output 
 //  P4OUT &= ~BIT3;//lED TURNS OFF TO INDICATE SENSORS ARE OFF
@@ -86,6 +92,7 @@
  void MAGoff(void){
  int checksensors; 
   P8SEL &= ~(BIT6|BIT7);
+  P8REN |= BIT7;
   P8DIR |= BIT7;//TURNS ONLY P8.7 On (signal is applied to a PMOS gate, being high makes it turn off, cutting voltage)
   P8OUT |= BIT7;//TURNS ONLY P8.7 On (signal is applied to a PMOS gate, being high makes it turn off, cutting voltage)
   //P4DIR &= ~BIT4;//lED TURNS OFF TO INDICATE SENSORS ARE OFF
@@ -100,7 +107,8 @@
   }
 void VREGon(void){
   P7OUT |= BIT3;
-  }
+ 
+   }
 
 void VREGoff(void){
   P7OUT &= ~BIT3;
@@ -137,9 +145,15 @@ void VREGinit(void){
 
  void Gyroinit(void){//INITALIZE ALL GYRO CONTROLS, SELFTEST, SLEEP, AND MUX TO SWITCH BETWEEN AXES. 
  P8DIR |= BIT0|BIT1|BIT3;
- P8OUT |= BIT1;//START GYRO IN SLEEP MODE TO REDUCE POWER. 
+ //P8OUT |= BIT1;//START GYRO IN SLEEP MODE TO REDUCE POWER. 
  }
  
+ void GyroOff(void){
+ //TURN ALL BITS TO GYRO OFF
+ //ALSO INITALIZES GYRO STUFF
+P8DIR=(BIT3|BIT2|BIT1|BIT0);
+P8OUT&=~(BIT3|BIT2|BIT1|BIT0);
+ }
 
 void UnusedPinSetup(void){
 P2DIR |= BIT0|BIT1|BIT2|BIT3|BIT4|BIT5;
@@ -174,4 +188,29 @@ void LEDL_BLOW_FUSE(void){
 P7OUT|=BIT5;
 ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
 P7OUT&=~BIT5;
+}
+
+void LED_3_ON(void){
+P4OUT|=BIT3;
+}
+
+void LED_3_OFF(void){
+P4OUT &=~BIT3;
+}
+
+
+void LED_2_ON(void){
+P4OUT|=BIT2;
+}
+
+void LED_2_OFF(void){
+P4OUT &=~BIT2;
+}
+
+void LED_1_ON(void){
+P4OUT|=BIT1;
+}
+
+void LED_1_OFF(void){
+P4OUT &=~BIT1;
 }
