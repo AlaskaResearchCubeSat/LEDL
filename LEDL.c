@@ -36,6 +36,9 @@ void sub_events(void *p) __toplevel{
   {
   ctl_events_set_clear(&SUB_events,SUB_EV_INT_0,0);
   }
+  //initialize EPS mutex
+  ctl_mutex_init(&EPS_mutex);
+
   for(;;){
     e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&SUB_events,SUB_EV_ALL,CTL_TIMEOUT_NONE,0);
     if(e&SUB_EV_INT_0){

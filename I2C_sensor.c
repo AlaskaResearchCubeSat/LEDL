@@ -166,12 +166,19 @@ const char name_addrs_clyde[]={EPS_Y_PLUS_CURRENT_ADDR,
                                };
 
 
+//mutex to lock control of the EPS
+CTL_MUTEX_t EPS_mutex;
+
 //read write cmd for CLYDE
 int clyde_take_data(int *array){
   int res,i,found=0;
   unsigned char tx[2],rx[2];
   unsigned short rez;
 
+  //prevent other tasks from sending commands to the EPS
+  if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,200)){
+    return -1;
+  }
   //Set
   //printf("sent cmd \r\n");
   //send cmd\
@@ -219,6 +226,8 @@ int clyde_take_data(int *array){
 
   printf("rez = 0x%04X\r\n",rez);
   array[i]=(int)rez;
+  //unlock the EPS
+  ctl_mutex_unlock(&EPS_mutex);
   //return success
   return RET_SUCCESS;
 }

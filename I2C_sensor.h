@@ -1,6 +1,6 @@
 #ifndef __I2C_SENSOR_H
   #define __I2C_SENSOR_H
-
+  #include <ctl.h>
 
 // Defined temperature addresses
 
@@ -60,6 +60,8 @@
   #define EPS_GPIO_STATUS_COMMAND     6
   #define EPS_WATCHDOG_COMMAND        128
 
+//mutex to lock control of the EPS
+extern CTL_MUTEX_t EPS_mutex;
 
 
 void Temp_I2C_sensor(int *array);
