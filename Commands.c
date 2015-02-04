@@ -782,9 +782,6 @@ const struct{
 {-.486,502.524,"Panel Z1 current","mA"},
 };
 
-#define EPS_ADDR_V1     (0x01)
-#define EPS_ADDR_V2     (0x2D)
-
 enum{EPS_ADC_CMD=0,EPS_STAT_CMD=1,EPS_PDM_OFF_CMD=2,EPS_VERSION_CMD=4,EPS_HEATER_CMD=5,EPS_WATCHDOG_CMD=128};
 
 //address of EPS

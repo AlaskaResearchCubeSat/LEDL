@@ -186,7 +186,7 @@ int clyde_take_data(int *array){
   for(i=0;i<20;i++){
     tx[0]=EPS_ADC_COMMAND;
     tx[1]= name_addrs_clyde[i];
-    res=i2c_tx(clyde_sensors,tx,2);
+    res=i2c_tx(EPS_I2C_ADDRESS,tx,2);
     //error msg or success
     if(res<0){
       //printf("tx returned = %s\r\n",I2C_error_str(res));
@@ -194,7 +194,7 @@ int clyde_take_data(int *array){
     //wait 1.2 ms (300)
     ctl_timeout_wait(ctl_get_current_time()+5);
     //read cmd
-    res=i2c_rx(clyde_sensors,rx,2);
+    res=i2c_rx(EPS_I2C_ADDRESS,rx,2);
     //error msg or success
     if (res<0){
       //printf("rx returned = %s\r\n",I2C_error_str(res));
@@ -210,13 +210,13 @@ int clyde_take_data(int *array){
   //take status packet for beacon
   tx[0]=EPS_STATUS_COMMAND;
   tx[1]=0;//THIS DOESNT MATTER WHAT IT IS 
-  res=i2c_tx(clyde_sensors,tx,2);
+  res=i2c_tx(EPS_I2C_ADDRESS,tx,2);
   //error msg or success
   //printf("%s\r\n",I2C_error_str(res));
   //wait 1.2 ms (300)
   ctl_timeout_wait(ctl_get_current_time()+5);
   //read cmd
-  res=i2c_rx(clyde_sensors,rx,2);
+  res=i2c_rx(EPS_I2C_ADDRESS,rx,2);
   //error msg or success
   if(res!=0){
     //printf("%s\r\n",I2C_error_str(res));

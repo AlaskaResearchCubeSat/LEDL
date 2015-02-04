@@ -813,7 +813,7 @@ for(;;){//take temperature data
           //lock mutex
           if(ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,1000)){
             //send command to EPS
-            i2c_tx(clyde_sensors,remote_EPS_cmd,2);
+            i2c_tx(EPS_I2C_ADDRESS,remote_EPS_cmd,2);
             //unlock mutex
             ctl_mutex_unlock(&EPS_mutex);
           }else{
