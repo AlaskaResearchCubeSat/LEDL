@@ -1073,8 +1073,8 @@ int EPS_cmd(char **argv,unsigned short argc){
       return 1;
     }
     printf("Heater %s command sent successfully\r\n",heat?"off":"on");
-  }else if(!strcmp(argv[1],"heater")){
-    if(argc!=2){
+  }else if(!strcmp(argv[1],"wdt")){
+    if(argc!=1){
       printf("Error : %s command %s requires 1 arguments but %i given\r\n",argv[0],argv[1],argc);
       return -1;
     }
@@ -1097,7 +1097,6 @@ int EPS_cmd(char **argv,unsigned short argc){
       return 1;
     }
     printf("Watchdog command sent successfully\r\n");
-
   }else if(!strcmp(argv[1],"i2c")){
     if(argc>2){
       printf("Error :too many arguments for %s command\r\n",argv[1]);
