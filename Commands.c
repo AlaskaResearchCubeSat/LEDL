@@ -867,6 +867,261 @@ ctl_timeout_wait(ctl_get_current_time()+2000);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+#define EPS_ADDR_V1     (0x01)
+#define EPS_ADDR_V2     (0x2D)
+
+enum{EPS_ADC_CMD=0,EPS_STAT_CMD=1,EPS_PDM_OFF_CMD=2,EPS_VERSION_CMD=4,EPS_HEATER_CMD=5,EPS_WATCHDOG_CMD=128};
+
+//address of EPS
+unsigned char EPS_addr=EPS_ADDR_V1;
+
+//EPS command to talk to the EPS
+int EPS_cmd(char **argv,unsigned short argc){
+  unsigned char addr,chan,pdm,heat;
+  unsigned char buf[2];
+  unsigned long num;
+  char *end;
+  int res,i;
+  unsigned short val;
+  if(argc<1){
+    printf("EPS addr = 0x%02X\r\n",(unsigned short)EPS_addr);
+    return 0;
+  }
+  if(!strcmp(argv[1],"addr")){
+    if(argc!=2){
+      printf("Error : %s command %s requires 2 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    if(!strcmp(argv[2],"v1")){
+        EPS_addr=EPS_ADDR_V1;
+    }else if(!strcmp(argv[2],"v2")){
+      EPS_addr=EPS_ADDR_V2;
+    }else{
+      addr=getI2C_addr(argv[2],0,NULL);
+      if(addr==0xFF){
+        return -2;
+      }
+    }      
+    printf("EPS addr = 0x%02X\r\n",(unsigned short)EPS_addr);
+  }else if(!strcmp(argv[1],"adc")){
+    if(argc!=2){
+      printf("Error : %s command %s requires 2 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    //chan=atoi(argv[2]);
+    num=strtoul(argv[2],&end,0);
+    if(end==argv[2]){
+      printf("Error : could not convert \"%s\"\r\n",argv[2]);
+      return -4;
+    }
+    if(*end!='\0'){
+      printf("Error : unknown suffix \"%s\" for \"%s\"\r\n",end,argv[2]);
+      return -5;
+    }
+    if(num>0xFF){
+      printf("Error : argument %lu is too large\r\n",num);
+      return -6;
+    }
+    chan=num;
+    //create packet
+    buf[0]=EPS_ADC_CMD;
+    buf[1]=chan;
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //print message
+    printf("Sending Request to 0x%02X for channel %u\r\n",(unsigned short)EPS_addr,(unsigned short)chan);
+    res=i2c_tx(EPS_addr,buf,2);
+    //check result
+    if(res<0){
+      printf("Error sending request : %s\r\n",I2C_error_str(res));
+      //unlock interface
+      ctl_mutex_unlock(&EPS_mutex);
+      return 1;
+    }
+    //wait a bit  
+    ctl_timeout_wait(ctl_get_current_time()+2);
+    //read result from EPS
+    res=i2c_rx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error reading value : %s\r\n",I2C_error_str(res));
+      return 2;
+    }
+    //print raw values
+    printf("Result 0x%02X, 0x%02X\r\n",buf[0],buf[1]);
+    //assemble values
+    val =buf[1];
+    val|=((unsigned short)buf[0])<<8;
+    //print value
+    printf("Value =  %u\r\n",val);
+  }else if(!strcmp(argv[1],"stat")){
+    if(argc!=2){
+      printf("Error : %s command %s requires 1 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    //create packet
+    buf[0]=EPS_STAT_CMD;
+    buf[1]=0;
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //print message
+    printf("Sending Request to 0x%02X for status\r\n",(unsigned short)EPS_addr);
+    res=i2c_tx(EPS_addr,buf,2);
+    //check result
+    if(res<0){
+      printf("Error sending request : %s\r\n",I2C_error_str(res));
+      //unlock EPS interface
+      ctl_mutex_unlock(&EPS_mutex);
+      return 1;
+    }
+    //read result from EPS
+    res=i2c_rx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error reading value : %s\r\n",I2C_error_str(res));
+      return 2;
+    }
+    //print result
+    printf("Result 0x%02X, 0x%02X\r\n",buf[0],buf[1]);
+  }else if(!strcmp(argv[1],"pdm")){
+    for(i=2,pdm=0;i<=argc;i++){
+      if(!strcmp(argv[i],"3.3V")){
+        //reset 3.3V rail
+        pdm|=BIT2;
+      }else if(!strcmp(argv[i],"5V")){
+        //reset 5V rail
+        pdm|=BIT1;
+      }else if(!strcmp(argv[i],"vbat")){
+        //reset battery bus rail
+        pdm|=BIT0;
+      }else{
+        printf("Error : unknown bus \"%s\"\r\n",argv[i]);
+        return -7;
+      }
+    }
+    //create packet
+    buf[0]=EPS_PDM_OFF_CMD;
+    buf[1]=pdm;
+    //print message
+    printf("Sending PDM off command to 0x%02X with 0x%02X\r\n",(unsigned short)EPS_addr,pdm);
+    res=i2c_tx(EPS_addr,buf,2);
+    //check result
+    if(res<0){
+      printf("Error sending packet : %s\r\n",I2C_error_str(res));
+      return 2;
+    }
+    //print success
+    printf("Request sent successfully\r\n");
+  }else if(!strcmp(argv[1],"version")){
+    if(argc!=2){
+      printf("Error : %s command %s requires 1 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    //create packet
+    buf[0]=EPS_VERSION_CMD;
+    buf[1]=0;
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //print message
+    printf("Sending Request to 0x%02X for version\r\n",(unsigned short)EPS_addr);
+    res=i2c_tx(EPS_addr,buf,2);
+    //check result
+    if(res<0){
+      printf("Error sending request : %s\r\n",I2C_error_str(res));
+      //unlock EPS interface
+      ctl_mutex_unlock(&EPS_mutex);
+      return 1;
+    }
+    //read result from EPS
+    res=i2c_rx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error reading value : %s\r\n",I2C_error_str(res));
+      return 2;
+    }
+    //print result
+    printf("Result 0x%02X, 0x%02X\r\n",buf[0],buf[1]);
+  }else if(!strcmp(argv[1],"heater")){
+    if(argc!=2){
+      printf("Error : %s command %s requires 2 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    if(!strcmp(argv[1],"off")){
+      //turn heater off
+      heat=0x01;
+    }else if(!strcmp(argv[1],"on")){
+      //turn heater on
+      heat=0x00;
+    }else{
+      printf("Error : unknown heater value \"%\"\r\n",argv[1]);
+      return -5;
+    }
+    //create packet
+    buf[0]=EPS_HEATER_CMD;
+    buf[1]=heat;
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //print message
+    printf("Sending heater %s command to  0x%02X \r\n",heat?"off":"on",(unsigned short)EPS_addr);
+    res=i2c_tx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error sending packet : %s\r\n",I2C_error_str(res));
+      return 1;
+    }
+    printf("Heater %s command sent successfully\r\n",heat?"off":"on");
+  }else if(!strcmp(argv[1],"heater")){
+    if(argc!=2){
+      printf("Error : %s command %s requires 1 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //create packet
+    buf[0]=EPS_WATCHDOG_CMD;
+    buf[1]=0;
+    //print message
+    printf("Sending watchdog command to 0x%02X \r\n",(unsigned short)EPS_addr);
+    res=i2c_tx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error sending packet : %s\r\n",I2C_error_str(res));
+      return 1;
+    }
+    printf("Watchdog command sent successfully\r\n");
+  }else{
+    printf("Error : unknown command %s\r\n",argv[1]);
+    return -3;
+  }
+  return 0;
+}
+
+
 //created table for help commands
 //table of commands with help
 const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or help on a spesific command.",helpCmd},
@@ -884,6 +1139,7 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                           {"pdm","Hard reset switches power busses off.\r\n\t",pdmcmd},
                           {"version","provieds firmware version number of the CLYDE board\n\r\t",versioncmd},
                           {"temp","provides temperature measurement\n\r\t",tempcmd},
+                          {"eps","[cmd] [value]""\r\n\t""Send commands to the EPS",EPS_cmd},
                           MMC_COMMANDS,CTL_COMMANDS,I2C_COMMANDS,ERROR_COMMANDS,
                          //end of list
                          {NULL,NULL,NULL}};
