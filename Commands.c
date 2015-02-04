@@ -1114,9 +1114,135 @@ int EPS_cmd(char **argv,unsigned short argc){
     }
     //print out current status
     printf("EPS I2C status : %s\r\n",(P7OUT&BIT4)?"on":"off");
+  }else if(!strcmp(argv[1],"read")){
+    if(argc!=3){
+      printf("Error : %s command %s requires 3 arguments but %i given\r\n",argv[0],argv[1],argc);
+      return -1;
+    }
+    //parse command value
+    num=strtoul(argv[2],&end,0);
+    //check if anything worked
+    if(end==argv[2]){
+      printf("Error : unknown command %s\r\n",argv[2]);
+      return -3;
+    }
+    //check for suffix
+    if(*end!='\0'){
+      printf("Error : unknown suffix \"%s\" for \"%s\"\r\n",end,argv[2]);
+      return -5;
+    }
+    //check range
+    if(num>0xFF){
+      printf("Error : command %lu is too large\r\n",num);
+      return -6;
+    }
+    //store in packet
+    buf[0]=num;
+    //parse argument
+    num=strtoul(argv[3],&end,0);
+    //check if anything worked
+    if(end==argv[3]){
+      printf("Error : could not parse argument \"%s\"\r\n",argv[3]);
+      return -3;
+    }
+    //check for suffix
+    if(*end!='\0'){
+      printf("Error : unknown suffix \"%s\" for \"%s\"\r\n",end,argv[3]);
+      return -5;
+    }
+    //check range
+    if(num>0xFF){
+      printf("Error : argument %lu is too large\r\n",num);
+      return -6;
+    }
+    //store in packet
+    buf[1]=num;
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //print sending info
+    printf("Sending request : 0x%02X, 0x%02X\r\n",buf[0],buf[1]);
+    res=i2c_tx(EPS_addr,buf,2);
+    //check result
+    if(res<0){
+      printf("Error sending request : %s\r\n",I2C_error_str(res));
+      //unlock EPS interface
+      ctl_mutex_unlock(&EPS_mutex);
+      return 1;
+    }
+    //read data
+    res=i2c_tx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error reading value : %s\r\n",I2C_error_str(res));
+      return 2;
+    }
+    //print result
+    printf("Result 0x%02X, 0x%02X\r\n",buf[0],buf[1]);
   }else{
-    printf("Error : unknown command %s\r\n",argv[1]);
-    return -3;
+    //attempt to parse numeric value
+    num=strtoul(argv[1],&end,0);
+    //check if anything worked
+    if(end==argv[1]){
+      printf("Error : unknown command %s\r\n",argv[1]);
+      return -3;
+    }
+    //check for second argument
+    if(argc!=2){
+      printf("Error : numeric commands require 2 arguments\r\n");
+      return -7;
+    }
+    //check for suffix
+    if(*end!='\0'){
+      printf("Error : unknown suffix \"%s\" for \"%s\"\r\n",end,argv[1]);
+      return -5;
+    }
+    //check range
+    if(num>0xFF){
+      printf("Error : argument %lu is too large\r\n",num);
+      return -6;
+    }
+    //store in packet
+    buf[0]=num;
+    //parse argument
+    num=strtoul(argv[2],&end,0);
+    //check if anything worked
+    if(end==argv[2]){
+      printf("Error : could not parse argument \"%s\"\r\n",argv[2]);
+      return -3;
+    }
+    //check for suffix
+    if(*end!='\0'){
+      printf("Error : unknown suffix \"%s\" for \"%s\"\r\n",end,argv[2]);
+      return -5;
+    }
+    //check range
+    if(num>0xFF){
+      printf("Error : argument %lu is too large\r\n",num);
+      return -6;
+    }
+    //store in packet
+   buf[1]=num;
+    //prevent other tasks from sending commands to the EPS
+    if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+      printf("Failed to lock EPS interface\r\n");
+      return -10;
+    }
+    //print sending info
+    printf("Sending 0x%02X, 0x%02X\r\n",buf[0],buf[1]);
+    res=i2c_tx(EPS_addr,buf,2);
+    //unlock EPS interface
+    ctl_mutex_unlock(&EPS_mutex);
+    //check result
+    if(res<0){
+      printf("Error sending packet : %s\r\n",I2C_error_str(res));
+      return 1;
+    }
+    printf("Command sent successfully\r\n");
   }
   return 0;
 }
