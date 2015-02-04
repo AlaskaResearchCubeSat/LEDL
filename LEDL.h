@@ -6,8 +6,8 @@
       //unsigned int gyro_data[GYRO_ARRAY_SIZE];
       char temp_data[TEMP_ARRAY_SIZE];
       char clyde_ttc;
-      int clyde_array_two_int[2];
       char clyde_array_two_char[2];
+      int clyde_array_two_int[2];
   }LEDL_STAT;
 
   

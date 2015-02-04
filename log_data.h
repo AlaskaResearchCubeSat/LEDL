@@ -26,7 +26,8 @@
   #define OrbitData_flag        0x01
   
   //LEDL data starts after error data
-  #define SD_LAUNCH_DATA_START  (ERR_ADDR_END+1)//this starts at 65
+  #define SD_LAUNCH_DATA_START  (ERR_ADDR_END+36)//this starts at 100
+  #define SD_BECON_DATA         (ERR_ADDR_END+1)//start our beacon data at 65
   #define launch_didNot_happened 0xAA
   #define launch_happened        0x22
   #define MODE_DETECT            0

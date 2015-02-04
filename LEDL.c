@@ -154,7 +154,7 @@ void sub_events(void *p) __toplevel{
           volatile unsigned int *arr = &ADC12MEM8;// creates a pointer, looks at the memory of mem0
             int resp; 
             int *buffer=NULL;//changed from char to int instead of each char being 1 byte their are now two bytes, resulting in being half as many things to index 
-            unsigned long SDaddr_for_total_blocks_used=0;
+            
             LEDL_TEST_LAUNCH *launch_detect_data;
 
            ADC12CTL0&=~ENC;     //disable ADC
@@ -234,7 +234,7 @@ void sub_events(void *p) __toplevel{
               //return -1; 
             }else{
               //read from SD card
-              resp=mmcReadBlock(SDaddr_for_total_blocks_used,(unsigned char*)buffer);
+              resp=mmcReadBlock(SD_BECON_DATA ,(unsigned char*)buffer);
               //store the last SDcard location that is stored in memory, this will either be by the end of logging data when Clyde turns on, or if ledl resets if 
               //it has decided that logging data has happened or if ledl has had a restart
               ledl_status.SDaddress=launch_detect_data->dat.detect_dat.SD_last_address;
@@ -252,7 +252,7 @@ void sub_events(void *p) __toplevel{
                    ledl_status.clyde_array_two_int[i]=clyde_data[i+15];
                    ledl_status.clyde_array_two_char[i]=clyde_data[i+17];//need to verify this
                    }
-                   ledl_status.clyde_ttc=clyde_data[19];//need to verify this
+                   ledl_status.clyde_ttc=clyde_data[21];//need to verify this
                    for(i=0;i<15;i++)
                    {
                    clyde_status.clyde_array_fifteen[i]=clyde_data[i];

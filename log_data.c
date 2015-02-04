@@ -75,7 +75,7 @@ extern CTL_EVENT_SET_t handle_LaunchDetect;
 
 
 //static int launch_data[LAUNCH_DATA_SIZE];
-unsigned long SDaddr=SD_LAUNCH_DATA_START;//STARTING SDaddr at 65
+unsigned long SDaddr=SD_LAUNCH_DATA_START;//STARTING SDaddr at 100
 static int *launch_data1;
 static int *launch_data2;
 int temp_measure[TEMP_ARRAY_SIZE];
@@ -173,8 +173,10 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           mmcReturnValue=mmcInit_card();
           if (mmcReturnValue==MMC_SUCCESS){
             printf("\rCard initalized Sucessfully\r\n");
-            result=mmcReadBlock(0,(unsigned char*)buffer);
-            startup_mode=launch_detect_data->dat.detect_dat.mode_status;
+            result=mmcReadBlock(SD_BECON_DATA ,(unsigned char*)buffer);
+            crc_check=crc16(launch_detect_data,510);
+            if(crc_check==launch_detect_data->crc)
+            {startup_mode=launch_detect_data->dat.detect_dat.mode_status;}
             }
           else {
           printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
@@ -198,7 +200,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                 {
                result=mmcReadBlock(SDaddr,(unsigned char*)buffer);
                //check to see if current sd card address is equal to the input LEDL_DATA_ID
-                  if((buffer[0]==LEDL_DATA_ID)||(launch_detect_data->ledl_address==LEDL_DETECT_ID))
+                  if((launch_detect_data->ledl_address==LEDL_DATA_ID)||(launch_detect_data->ledl_address==LEDL_DETECT_ID))
                   {
                   //this value starts at 65 and begins looking for a free spot in memory 
                   SDaddr++;
@@ -409,10 +411,6 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           launch_detect_data->dat.detect_dat.max_and_min_from_launch[4]=maxz;
           launch_detect_data->dat.detect_dat.max_and_min_from_launch[5]=minz;
           
-
-          crc_check=crc16(launch_data,510);                          
-          launch_detect_data->crc=crc_check;//put crc in last spot of data
-
               if(startup_mode==MODE_DETECT)
                 {
                   if (totalacc>go_launch_value)
@@ -421,14 +419,18 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                      //begin logging data
                       startup_mode=MODE_LAUNCH;
                       launch_detect_data->dat.detect_dat.mode_status=startup_mode;
+                      crc_check=crc16(launch_detect_data,510);                          
+                      launch_detect_data->crc=crc_check;//put crc in last spot of data
                       data=0;
                       switch_is_on=1; 
                       checking_launch=0;
                       printf("WE HAVE LAUNCH");
                       accel_count_for_launch_test=0;
-                      result = mmcWriteBlock(SDaddr, (unsigned char*) launch_data); //(unsigned char*) casting my pointer(array) as a char 
-                      launch_detect_data->dat.detect_dat.SDaddress=0;//since we are storing this in location zero, the address should say zero 
-                      result = mmcWriteBlock(0,(unsigned char*) launch_data);//store that launch happened in the first spot
+                      result = mmcWriteBlock(SDaddr, (unsigned char*) launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
+                      launch_detect_data->dat.detect_dat.SDaddress=SD_BECON_DATA;//since we are storing this in location zero, the address should say zero 
+                      crc_check=crc16(launch_detect_data,510);                          
+                      launch_detect_data->crc=crc_check;//put crc in last spot of data;
+                      result = mmcWriteBlock(SD_BECON_DATA ,(unsigned char*) launch_detect_data);//store that launch happened in the first spot
                       SDaddr+=1;//memory card is block address
                       P4OUT^=BIT5; 
                      }
@@ -436,6 +438,8 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                       //go back to sleep 
                       checking_launch=0;
                       launch_detect_data->dat.detect_dat.mode_status=startup_mode;
+                      crc_check=crc16(launch_detect_data,510);                          
+                      launch_detect_data->crc=crc_check;//put crc in last spot of data
                       data=0;
                       printf("NO Launch, return to sleep");
                       accel_count_for_launch_test=0;
@@ -462,7 +466,10 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                       printf("WE HAVE LAUNCH");
                       accel_count_for_launch_test=0;
                       result = mmcWriteBlock(SDaddr, (unsigned char*) launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
-                      result = mmcWriteBlock(0,(unsigned char*) launch_detect_data);//store that launch happened in the first spot
+                      launch_detect_data->dat.detect_dat.SDaddress=SD_BECON_DATA;//since we are storing this in location zero, the address should say zero 
+                      crc_check=crc16(launch_detect_data,510);                          
+                      launch_detect_data->crc=crc_check;//put crc in last spot of data
+                      result = mmcWriteBlock(SD_BECON_DATA ,(unsigned char*) launch_detect_data);//store that launch happened in the first spot
                       SDaddr+=1;//memory card is block address
                       P4OUT^=BIT5; 
                       }//closes else, launch has been verified before it died for some reason, the code will pick up where it left off in the count.   
@@ -671,6 +678,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                                     crc_check=crc16(launch_data,510);
                                     launch_data[255]=crc_check;//put crc in last spot of data
                                     frame++;
+                                    row=0;
                                     data=0;
                                     if (launch_data==launch_data1)
                                     {
@@ -714,7 +722,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
              launch_detect_data->dat.detect_dat.mode_status=MODE_ORBIT;
              crc_check=crc16(launch_data,510);                          
              launch_detect_data->crc=crc_check;//put crc in last spot of data
-             result = mmcWriteBlock(0,(unsigned char*) &launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
+             result = mmcWriteBlock(SD_BECON_DATA ,(unsigned char*) &launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
 
              frame=0;
              ACCoff();

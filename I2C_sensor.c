@@ -146,12 +146,12 @@ for (i=0;i<TEMP_SENSORS;i++)
 
 const char name_addrs_clyde[]={EPS_Y_PLUS_CURRENT_ADDR,
                                EPS_Y_MINUS_CURRENT_ADDR,
-                               EPS_Y_VOLTAGE_ADDR,
+                               EPS_Y_PLUS_VOLTAGE_ADDR,
                                EPS_X_PLUS_CURRENT_ADDR,
                                EPS_X_MINUS_CURRENT_ADDR,
-                               EPS_X_VOLTAGE_ADDR,
+                               EPS_X_PLUS_VOLTAGE_ADDR,
                                EPS_Z_MINUS_CURRENT_ADDR,
-                               EPS_Z_VOLTAGE_ADDR,
+                               EPS_Z_MINUS_VOLTAGE_ADDR,
                                EPS_BATTBUS_CURRENT,
                                EPS_5BUS_CURRENT,
                                EPS_3_3BUS_CURRENT,
@@ -173,33 +173,33 @@ unsigned char tx[2],rx[2];
 unsigned short rez;
 
 //Set
-printf("sent cmd \r\n");
+//printf("sent cmd \r\n");
 //send cmd\
-//take first 19 adc measurements for beacon 
+//take first 21 adc measurements for beacon 
 for(i=0;i<20;i++)
 {
 tx[0]=EPS_ADC_COMMAND;
 tx[1]= name_addrs_clyde[i];
 res=i2c_tx(clyde_sensors,tx,2);
 //error msg or success
-if(res!=0){
-printf("tx returned = %s\r\n",I2C_error_str(res));
+if(res<0){
+//printf("tx returned = %s\r\n",I2C_error_str(res));
 }
 //wait 1.2 ms (300)
 ctl_timeout_wait(ctl_get_current_time()+5);
 //read cmd
 res=i2c_rx(clyde_sensors,rx,2);
 //error msg or success
-if (res!=0)
+if (res<0)
 {
-printf("rx returned = %s\r\n",I2C_error_str(res));
+//printf("rx returned = %s\r\n",I2C_error_str(res));
 }
 rez=rx[1];
 rez|=rx[0]<<8;
 rez&=0x3FF;
-printf("rez = %i\r\n",rez);
+//printf("rez = %i\r\n",rez);
 array[i]=(int)rez;
-printf("EPS data = %i, array # = %i\r\n",array[i],i);
+//printf("EPS data = %i, array # = %i\r\n",array[i],i);
 }
 
 //take status packet for beacon
@@ -215,7 +215,7 @@ res=i2c_rx(clyde_sensors,rx,2);
 //error msg or success
 if(res!=0)
 {
-printf("%s\r\n",I2C_error_str(res));
+//printf("%s\r\n",I2C_error_str(res));
 }
 rez=rx[1];
 rez|=rx[0]<<8;
