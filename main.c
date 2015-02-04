@@ -71,11 +71,10 @@ initI2C();
  
 //set up timer
 init_timerA(); // some of the set up is now started in ARC_setup 
-mmcInit_msp();
+mmcInit_msp_off();
 
 
 setup_launch_detect();
-_mmc_pins_off();
 //setup_orbit_start();
 UnusedPinSetup();//drive all unused pins to outputs 
 GyroOff();
