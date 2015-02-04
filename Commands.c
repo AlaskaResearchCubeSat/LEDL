@@ -696,12 +696,6 @@ int turnoffsdcardCmd(char **argv, unsigned short argc){
        ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
        VREGoff();//turn Voltage regulator off for low power application
 }
-////////////////////////////////////////////////////////////////////////////////////////////////
- //EPS telemetry
-  int battempcmd(char **argv,unsigned short arg){
-  
-}
-////////////////////////////////////////////////////////////////////////////////////////////////
 
 const struct{
   float scale,offset;
@@ -827,32 +821,6 @@ ctl_timeout_wait(ctl_get_current_time()+3);
 P7OUT&=~BIT4;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-int pdmcmd(char **argv,unsigned short argc){
-unsigned char tx[2]={0x02,BIT2};
-int res;
-
-//send cmd
-res=i2c_tx(0x01,tx,2);  
-printf("PDM reset \r\n");
-// LED off
-
-}
-int versioncmd(char **argv,unsigned short argc){
-unsigned char tx[2]={0x02,BIT2},rx[2];
-int res;
-
-//send cmd
-res=i2c_tx(0x01,tx,2);
-//wait a bit
-ctl_timeout_wait(ctl_get_current_time()+3);
-//read cmd
-res=i2c_rx(0x01,rx,2);
-//convert string to int
-//res=atoi(argv[1]);
-printf("version number is %d\n\r",res);
-
-}
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 int tempcmd(char **argv,unsigned short argc){
 int temp_measure[7];
@@ -1134,10 +1102,7 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
                           {"testlaunch","[command]\r\n\t""check to see if interrupt works",testlaunchCmd},
                           {"SDon","[command]\r\n\t""Turn on SD card",turnonsdcardCmd},
                           {"SDoff","[command]\r\n\t""Turn on SD card",turnoffsdcardCmd},
-                          {"battemp","addr num [data0]\r\n\t gets CLYDE battery temperature.",battempcmd},
                           {"clyde","channel \r\n\t""gets data from Clyde ADC channels.\n\r\t",clydecmd},
-                          {"pdm","Hard reset switches power busses off.\r\n\t",pdmcmd},
-                          {"version","provieds firmware version number of the CLYDE board\n\r\t",versioncmd},
                           {"temp","provides temperature measurement\n\r\t",tempcmd},
                           {"eps","[cmd] [value]""\r\n\t""Send commands to the EPS",EPS_cmd},
                           MMC_COMMANDS,CTL_COMMANDS,I2C_COMMANDS,ERROR_COMMANDS,
