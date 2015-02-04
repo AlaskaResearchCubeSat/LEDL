@@ -168,62 +168,57 @@ const char name_addrs_clyde[]={EPS_Y_PLUS_CURRENT_ADDR,
 
 //read write cmd for CLYDE
 int clyde_take_data(int *array){
-int res,i,found=0;
-unsigned char tx[2],rx[2];
-unsigned short rez;
+  int res,i,found=0;
+  unsigned char tx[2],rx[2];
+  unsigned short rez;
 
-//Set
-//printf("sent cmd \r\n");
-//send cmd\
-//take first 21 adc measurements for beacon 
-for(i=0;i<20;i++)
-{
-tx[0]=EPS_ADC_COMMAND;
-tx[1]= name_addrs_clyde[i];
-res=i2c_tx(clyde_sensors,tx,2);
-//error msg or success
-if(res<0){
-//printf("tx returned = %s\r\n",I2C_error_str(res));
-}
-//wait 1.2 ms (300)
-ctl_timeout_wait(ctl_get_current_time()+5);
-//read cmd
-res=i2c_rx(clyde_sensors,rx,2);
-//error msg or success
-if (res<0)
-{
-//printf("rx returned = %s\r\n",I2C_error_str(res));
-}
-rez=rx[1];
-rez|=rx[0]<<8;
-rez&=0x3FF;
-//printf("rez = %i\r\n",rez);
-array[i]=(int)rez;
-//printf("EPS data = %i, array # = %i\r\n",array[i],i);
-}
+  //Set
+  //printf("sent cmd \r\n");
+  //send cmd\
+  //take first 21 adc measurements for beacon 
+  for(i=0;i<20;i++){
+    tx[0]=EPS_ADC_COMMAND;
+    tx[1]= name_addrs_clyde[i];
+    res=i2c_tx(clyde_sensors,tx,2);
+    //error msg or success
+    if(res<0){
+      //printf("tx returned = %s\r\n",I2C_error_str(res));
+    }
+    //wait 1.2 ms (300)
+    ctl_timeout_wait(ctl_get_current_time()+5);
+    //read cmd
+    res=i2c_rx(clyde_sensors,rx,2);
+    //error msg or success
+    if (res<0){
+      //printf("rx returned = %s\r\n",I2C_error_str(res));
+    }
+    rez=rx[1];
+    rez|=rx[0]<<8;
+    rez&=0x3FF;
+    //printf("rez = %i\r\n",rez);
+    array[i]=(int)rez;
+    //printf("EPS data = %i, array # = %i\r\n",array[i],i);
+  }
 
-//take status packet for beacon
-tx[0]=EPS_STATUS_COMMAND;
-tx[1]=0;//THIS DOESNT MATTER WHAT IT IS 
-res=i2c_tx(clyde_sensors,tx,2);
-//error msg or success
-//printf("%s\r\n",I2C_error_str(res));
-//wait 1.2 ms (300)
-ctl_timeout_wait(ctl_get_current_time()+5);
-//read cmd
-res=i2c_rx(clyde_sensors,rx,2);
-//error msg or success
-if(res!=0)
-{
-//printf("%s\r\n",I2C_error_str(res));
-}
-rez=rx[1];
-rez|=rx[0]<<8;
+  //take status packet for beacon
+  tx[0]=EPS_STATUS_COMMAND;
+  tx[1]=0;//THIS DOESNT MATTER WHAT IT IS 
+  res=i2c_tx(clyde_sensors,tx,2);
+  //error msg or success
+  //printf("%s\r\n",I2C_error_str(res));
+  //wait 1.2 ms (300)
+  ctl_timeout_wait(ctl_get_current_time()+5);
+  //read cmd
+  res=i2c_rx(clyde_sensors,rx,2);
+  //error msg or success
+  if(res!=0){
+    //printf("%s\r\n",I2C_error_str(res));
+  }
+  rez=rx[1];
+  rez|=rx[0]<<8;
 
-printf("rez = 0x%04X\r\n",rez);
-array[i]=(int)rez;
-//turn LED off
-ctl_timeout_wait(ctl_get_current_time()+3);
-
-
+  printf("rez = 0x%04X\r\n",rez);
+  array[i]=(int)rez;
+  //return success
+  return RET_SUCCESS;
 }
