@@ -771,54 +771,77 @@ const struct{
 {-.486,502.524,"Panel Z1 current","mA"},
 };
 
+#define EPS_ADDR_V1     (0x01)
+#define EPS_ADDR_V2     (0x2D)
+
+enum{EPS_ADC_CMD=0,EPS_STAT_CMD=1,EPS_PDM_OFF_CMD=2,EPS_VERSION_CMD=4,EPS_HEATER_CMD=5,EPS_WATCHDOG_CMD=128};
+
+//address of EPS
+unsigned char EPS_addr=EPS_ADDR_V1;
 
 
 //read write cmd for CLYDE
 int clydecmd(char **argv,unsigned short argc){
-int res,i,found=0;
-unsigned char tx[2]={0x00,19}, rx[2];
-unsigned short rez;
-//TURN ON I2C LINE FOR CLYDE 
-P7DIR |= BIT4;
-P7OUT |= BIT4;
-//Set
+  int res,i,found=0;
+  unsigned char tx[2]={0x00,19}, rx[2];
+  unsigned short rez;
+  //TURN ON I2C LINE FOR CLYDE 
+  P7DIR |= BIT4;
+  P7OUT |= BIT4;
+  //Set
 
-ctl_timeout_wait(ctl_get_current_time()+3);
-// check num of arguments  
-if (argc!=1){
-  printf("Enter an ADC address from 1 to 31 \r\n");
-  return 1;
-}
-// convert **argv string to int
-tx[1]=atoi(argv[1]);
-// check to make sure ADC addressing value is btwn 0 and 31
-if(tx[1]>31){
-printf("Error enterd channel value was %d\r\n Enter an ADC address from 0 to 31.\r\n",tx[1]);
-return 2;}
+  ctl_timeout_wait(ctl_get_current_time()+3);
+  // check num of arguments  
+  if (argc!=1){
+    printf("Enter an ADC address from 1 to 31 \r\n");
+    return 1;
+  }
+  // convert **argv string to int
+  tx[1]=atoi(argv[1]);
+  // check to make sure ADC addressing value is btwn 0 and 31
+  if(tx[1]>31){
+    printf("Error enterd channel value was %d\r\n Enter an ADC address from 0 to 31.\r\n",tx[1]);
+    return 2;
+  }
+  //prevent other tasks from sending commands to the EPS
+  if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
+    printf("Failed to lock EPS interface\r\n");
+    return -10;
+  }
+  printf("Requesting ADC channel %u from EPS at addr 0x%02X\r\n",(unsigned short)tx[1],EPS_addr);
+  //send cmd
+  res=i2c_tx(EPS_addr,tx,2);
+  //check for error
+  if(res<0){
+    printf("Error sending request : %s\r\n",I2C_error_str(res));
+    //unlock mutex
+    ctl_mutex_unlock(&EPS_mutex);
+    return -1;
+  }
+  //wait 1.2 ms (300)
+  ctl_timeout_wait(ctl_get_current_time()+5);
+  //read cmd
+  res=i2c_rx(EPS_addr,rx,2);
+  //unlock mutex
+  ctl_mutex_unlock(&EPS_mutex);
+  //check for error
+  if(res<0){
+    //error msg or success
+    printf("%s\r\n",I2C_error_str(res));
+    return -2;
+  }
+  //compute result
+  rez=rx[1];
+  rez|=rx[0]<<8;
+  rez&=0x3FF;
+  printf("rez = %i\r\n",rez);
+  // ADC channel signal conversion equations
+  printf("%s = %f %s\r\n",clyde_tbl[tx[1]].name,clyde_tbl[tx[1]].scale*rez+clyde_tbl[tx[1]].offset,clyde_tbl[tx[1]].units);
+  //turn LED off
+  ctl_timeout_wait(ctl_get_current_time()+3);
 
-printf("sent cmd \r\n");
-//send cmd\
-
-res=i2c_tx(0x01,tx,2);
-//error msg or success
-printf("%s\r\n",I2C_error_str(res));
-//wait 1.2 ms (300)
-ctl_timeout_wait(ctl_get_current_time()+5);
-//read cmd
-res=i2c_rx(0x01,rx,2);
-//error msg or success
-printf("%s\r\n",I2C_error_str(res));
-rez=rx[1];
-rez|=rx[0]<<8;
-rez&=0x3FF;
-printf("rez = %i\r\n",rez);
-// ADC channel signal conversion equations
-printf("%s = %f %s\r\n",clyde_tbl[tx[1]].name,clyde_tbl[tx[1]].scale*rez+clyde_tbl[tx[1]].offset,clyde_tbl[tx[1]].units);
-//turn LED off
-ctl_timeout_wait(ctl_get_current_time()+3);
-
-//TURN OFF I2C LINE FOR CLYDE 
-P7OUT&=~BIT4;
+  //TURN OFF I2C LINE FOR CLYDE 
+  P7OUT&=~BIT4;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -834,14 +857,6 @@ ctl_timeout_wait(ctl_get_current_time()+2000);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define EPS_ADDR_V1     (0x01)
-#define EPS_ADDR_V2     (0x2D)
-
-enum{EPS_ADC_CMD=0,EPS_STAT_CMD=1,EPS_PDM_OFF_CMD=2,EPS_VERSION_CMD=4,EPS_HEATER_CMD=5,EPS_WATCHDOG_CMD=128};
-
-//address of EPS
-unsigned char EPS_addr=EPS_ADDR_V1;
 
 //EPS command to talk to the EPS
 int EPS_cmd(char **argv,unsigned short argc){
