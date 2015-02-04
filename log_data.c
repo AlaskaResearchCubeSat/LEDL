@@ -12,6 +12,7 @@
 #include "sensor-interface.h"
 #include <crc.h>
 #include <math.h>
+#include <i2c.h>
 
 
 /*
@@ -558,7 +559,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                                     }//closes if (frame_100==100)
                                     else if (frame_100==0)
                                     {
-                                    ctl_events_set_clear(&handle_get_I2C_data,I2C_EV_GET_DATA,0);  
+                                    ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_GET_TEMP_DATA,0);  
                                     data++;
                                     }//closes else if (frame_100==0)
                                     else
@@ -793,6 +794,10 @@ void writedatatoSDcard(void)
          }
           }
  }
+
+//data for EPS commands sent over I2C
+unsigned char remote_EPS_cmd[2];
+
 //create an event to take I2C data 
 void takeI2Cdata(void)
 {
@@ -800,11 +805,23 @@ int k=0;
 int l=0;
 unsigned get_I2C_data;
 for(;;){//take temperature data 
-        get_I2C_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_I2C_data,I2C_EV_GET_DATA,CTL_TIMEOUT_NONE,0);
-        if (get_I2C_data&(I2C_EV_GET_DATA))
-        {
-        Temp_I2C_sensor(temp_measure);
-
+        get_I2C_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_I2C_data,LEDL_EV_ALL,CTL_TIMEOUT_NONE,0);
+        if (get_I2C_data&(LEDL_EV_GET_TEMP_DATA)){
+          Temp_I2C_sensor(temp_measure);
+        }
+        if(get_I2C_data&(LEDL_EV_EPS_CMD)){
+          //lock mutex
+          if(ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,1000)){
+            //send command to EPS
+            i2c_tx(clyde_sensors,remote_EPS_cmd,2);
+            //unlock mutex
+            ctl_mutex_unlock(&EPS_mutex);
+          }else{
+            //TODO: report error
+            //trigger event again            
+            ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_EPS_CMD,0);
+            //TODO : timeout?
+          }
         }
        }
       }

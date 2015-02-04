@@ -20,7 +20,10 @@
   
   #define SD_EV_ALL             (SD_EV_WRITE_1|SD_EV_WRITE_2|SD_EV_DIE|SD_EV_FINISHED)
   
-  #define I2C_EV_GET_DATA       0x01
+  #define LEDL_EV_GET_TEMP_DATA  0x01
+  #define LEDL_EV_EPS_CMD        0x02
+  #define LEDL_EV_ALL            (LEDL_EV_EPS_CMD|LEDL_EV_GET_TEMP_DATA)
+
   #define CLYDE_EV_GET_DATA     0x01
   #define LaunchData_flag       0x01
   #define OrbitData_flag        0x01
@@ -41,6 +44,8 @@
   extern CTL_EVENT_SET_t handle_get_clyde_data; 
   extern CTL_EVENT_SET_t handle_LaunchData;
   extern CTL_EVENT_SET_t handle_OrbitData;
+
+  extern unsigned char remote_EPS_cmd[2];
 
 
   void launch_data_log(void *p); //USE WHEN USED AS A TASK 

@@ -29,6 +29,7 @@
 //this code is a receptacle for getting commands from the user. 
 void commands(void);
 
+
 int SUB_parseCmd(unsigned char src,unsigned char cmd, unsigned char *dat, unsigned short len){
 int i;
   unsigned short time,count;
@@ -84,6 +85,16 @@ int i;
           mag_tx_addr=BUS_ADDR_ACDS;
           return RET_SUCCESS;
       }
+      case CMD_EPS_SEND:
+        if(len!=2){
+          return ERR_PK_LEN;
+        }
+        //store command data
+        remote_EPS_cmd[0]=dat[0];
+        remote_EPS_cmd[1]=dat[1];
+        //trigger event
+        ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_EPS_CMD,0);
+        return RET_SUCCESS;
   }
   //Return Error
   return ERR_UNKNOWN_CMD;
