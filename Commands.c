@@ -1097,6 +1097,24 @@ int EPS_cmd(char **argv,unsigned short argc){
       return 1;
     }
     printf("Watchdog command sent successfully\r\n");
+
+  }else if(!strcmp(argv[1],"i2c")){
+    if(argc>2){
+      printf("Error :too many arguments for %s command\r\n",argv[1]);
+      return -1;
+    }
+    //check if value given
+    if(argc==2){
+      if(!strcmp(argv[2],"on")){
+        P7OUT|=BIT4;
+      }else if(!strcmp(argv[2],"off")){
+        P7OUT&=~BIT4;
+      }else{
+        printf("Error : unknown argument \"%s\"\r\n",argv[2]);
+      }
+    }
+    //print out current status
+    printf("EPS I2C status : %s\r\n",(P7OUT&BIT4)?"on":"off");
   }else{
     printf("Error : unknown command %s\r\n",argv[1]);
     return -3;
