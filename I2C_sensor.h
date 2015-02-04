@@ -58,6 +58,7 @@
   #define EPS_ADC_COMMAND             0
   #define EPS_STATUS_COMMAND          1
   #define EPS_GPIO_COMMAND            2
+  #define EPS_PDM_OFF_COMMAND         2
   #define EPS_PULSE_COMMAND           3
   #define EPS_VERSION_COMMAND         4
   #define EPS_HEATER_COMMAND          5

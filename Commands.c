@@ -782,8 +782,6 @@ const struct{
 {-.486,502.524,"Panel Z1 current","mA"},
 };
 
-enum{EPS_ADC_CMD=0,EPS_STAT_CMD=1,EPS_PDM_OFF_CMD=2,EPS_VERSION_CMD=4,EPS_HEATER_CMD=5,EPS_WATCHDOG_CMD=128};
-
 //address of EPS
 unsigned char EPS_addr=EPS_ADDR_V1;
 
@@ -791,7 +789,7 @@ unsigned char EPS_addr=EPS_ADDR_V1;
 //read write cmd for CLYDE
 int clydecmd(char **argv,unsigned short argc){
   int res,i,found=0;
-  unsigned char tx[2]={0x00,19}, rx[2];
+  unsigned char tx[2]={EPS_ADC_COMMAND,19}, rx[2];
   unsigned short rez;
   //TURN ON I2C LINE FOR CLYDE 
   P7DIR |= BIT4;
@@ -915,7 +913,7 @@ int EPS_cmd(char **argv,unsigned short argc){
     }
     chan=num;
     //create packet
-    buf[0]=EPS_ADC_CMD;
+    buf[0]=EPS_ADC_COMMAND;
     buf[1]=chan;
     //prevent other tasks from sending commands to the EPS
     if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
@@ -956,7 +954,7 @@ int EPS_cmd(char **argv,unsigned short argc){
       return -1;
     }
     //create packet
-    buf[0]=EPS_STAT_CMD;
+    buf[0]=EPS_STATUS_COMMAND;
     buf[1]=0;
     //prevent other tasks from sending commands to the EPS
     if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
@@ -1001,7 +999,7 @@ int EPS_cmd(char **argv,unsigned short argc){
       }
     }
     //create packet
-    buf[0]=EPS_PDM_OFF_CMD;
+    buf[0]=EPS_PDM_OFF_COMMAND;
     buf[1]=pdm;
     //print message
     printf("Sending PDM off command to 0x%02X with 0x%02X\r\n",(unsigned short)EPS_addr,pdm);
@@ -1019,7 +1017,7 @@ int EPS_cmd(char **argv,unsigned short argc){
       return -1;
     }
     //create packet
-    buf[0]=EPS_VERSION_CMD;
+    buf[0]=EPS_VERSION_COMMAND;
     buf[1]=0;
     //prevent other tasks from sending commands to the EPS
     if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
@@ -1063,7 +1061,7 @@ int EPS_cmd(char **argv,unsigned short argc){
       return -5;
     }
     //create packet
-    buf[0]=EPS_HEATER_CMD;
+    buf[0]=EPS_HEATER_COMMAND;
     buf[1]=heat;
     //prevent other tasks from sending commands to the EPS
     if(!ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,2000)){
@@ -1092,7 +1090,7 @@ int EPS_cmd(char **argv,unsigned short argc){
       return -10;
     }
     //create packet
-    buf[0]=EPS_WATCHDOG_CMD;
+    buf[0]=EPS_WATCHDOG_COMMAND;
     buf[1]=0;
     //print message
     printf("Sending watchdog command to 0x%02X \r\n",(unsigned short)EPS_addr);
