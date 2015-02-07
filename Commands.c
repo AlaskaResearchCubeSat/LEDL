@@ -18,6 +18,8 @@
 #include "LaunchDetect.h"
 #include "Commands.h"
 #include "log_data.h"
+#include "LEDL.h"
+#include "Error_src.h"
 
 
 
@@ -29,9 +31,11 @@
 //this code is a receptacle for getting commands from the user. 
 void commands(void);
 
+SD_block_addr SD_read_addr;
 
 int SUB_parseCmd(unsigned char src,unsigned char cmd, unsigned char *dat, unsigned short len){
-int i;
+  int i;
+  unsigned long block_id;
   unsigned short time,count;
   switch(cmd){
     case CMD_MAG_SAMPLE_CONFIG:
@@ -94,6 +98,26 @@ int i;
         remote_EPS_cmd[1]=dat[1];
         //trigger event
         ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_EPS_CMD,0);
+        return RET_SUCCESS;
+      case CMD_LEDL_READ_BLOCK:
+        if(len!=3){
+          return ERR_PK_LEN;
+        }
+        block_id =((unsigned long)dat[0])<<16;
+        block_id|=((unsigned long)dat[1])<<8;
+        block_id|=((unsigned long)dat[2]);
+        //set SD address
+        SD_read_addr=SD_BECON_DATA+block_id;
+        //trigger event
+        ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_SEND_DAT,0);
+        //Success!
+        return RET_SUCCESS;
+       case CMD_LEDL_BLOW_FUSE:
+       if(len!=0){
+         return ERR_PK_LEN;
+       }
+        //trigger event
+        ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_BLOW_FUSE,0);
         return RET_SUCCESS;
   }
   //Return Error
@@ -1286,7 +1310,13 @@ const CMD_SPEC cmd_tbl[]={{"help"," [command]\r\n\t""get a list of commands or h
 
 
 char *err_decode(char buf[150], unsigned short source,int err, unsigned short argument){
-
+  switch(source){
+    case ERR_SRC_LEDL:
+      switch(err){
+        case STAT_TIMEOUT:
+          return "LEDL : Status timeout reset";
+      }
+  }
   sprintf(buf,"source = %i, error = %i, argument = %i",source,err,argument);
   return buf;
 }

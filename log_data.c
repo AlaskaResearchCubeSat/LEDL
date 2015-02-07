@@ -13,6 +13,9 @@
 #include <crc.h>
 #include <math.h>
 #include <i2c.h>
+#include "LEDL.h"
+#include <Error.h>
+#include "Error_src.h"
 
 
 /*
@@ -196,29 +199,28 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
               check_for_free_address=1;
               SDaddr=launch_detect_data->dat.detect_dat.SD_last_address;
                LED_1_ON();
-               ctl_timeout_wait(ctl_get_current_time()+500);//4.88 MS IS 5
+               //ctl_timeout_wait(ctl_get_current_time()+500);//4.88 MS IS 5
                while(check_for_free_address)
                 {
-               result=mmcReadBlock(SDaddr,(unsigned char*)buffer);
-               //check to see if current sd card address is equal to the input LEDL_DATA_ID
-                  if((launch_detect_data->ledl_address==LEDL_DATA_ID)||(launch_detect_data->ledl_address==LEDL_DETECT_ID))
-                  {
-                  //this value starts at 65 and begins looking for a free spot in memory 
-                  SDaddr++;
-                  LED_2_ON();
-                  ctl_timeout_wait(ctl_get_current_time()+500);//4.88 MS IS 5
-                  LED_2_OFF();
-                  }
-                  else
-                  {
-                  int checking_launch=1;
-                  check_for_free_address=0;
-                  LED_1_OFF();
-                  //have data start, by acting like interrput has first happened
-                  ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
-                  switch_is_on=1; 
-                                
-                  }
+                   result=mmcReadBlock(SDaddr,(unsigned char*)buffer);
+                     //check to see if current sd card address is equal to the input LEDL_DATA_ID
+                      if((launch_detect_data->ledl_address==LEDL_DATA_ID)||(launch_detect_data->ledl_address==LEDL_DETECT_ID))
+                      {
+                      //this value starts at 65 and begins looking for a free spot in memory 
+                      SDaddr++;
+                      //ctl_timeout_wait(ctl_get_current_time()+500);//4.88 MS IS 5
+                      }
+                      else
+                      {
+                      int checking_launch=1;
+                      check_for_free_address=0;
+                      LED_1_OFF();
+                      //have data start, by acting like interrput has first happened
+                      ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
+                      switch_is_on=1; 
+                        
+                      }
+                    
                 }
             }
             else
@@ -240,7 +242,8 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                 }
              
             }
-         
+         //waiting for event 
+         BUS_lp_mode=ML_LPM4;
        
         //Code that checks the launch detect
         checking_for_launch=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_LaunchDetect,(1<<0),CTL_TIMEOUT_NONE,0);
@@ -260,6 +263,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
           float adcconversion = 0.0008057; // volts per adc reference 0 to 4096 for 3.3 V source 
           float go_launch_value=0.0156;//this value is when a launch occures 0.0855^2
           LEDL_TEST_LAUNCH *launch_detect_data;//call variables by calling launch_detect_data.dat.detect_dat.SDaddress
+          BUS_lp_mode=ML_LPM0;
           wake_up_attempt++;//increase the wake up attempt
          //turn up the voltage
           VREGon();
@@ -310,8 +314,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                             {
                             
                                volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0, checks adc register 
-                                  LED_3_ON();
-                                  
+                                 
                                   for (i=0; i<6; ++i)// look at first 6 adc measurements of acceleration  
                                   {
                                     checkacc[i]=arr[i];
@@ -433,10 +436,11 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                       launch_detect_data->crc=crc_check;//put crc in last spot of data;
                       result = mmcWriteBlock(SD_BECON_DATA ,(unsigned char*) launch_detect_data);//store that launch happened in the first spot
                       SDaddr+=1;//memory card is block address
-                      P4OUT^=BIT5; 
+                      //P4OUT^=BIT5; 
                      }
                   else{
                       //go back to sleep 
+                      BUS_lp_mode=ML_LPM4;
                       checking_launch=0;
                       launch_detect_data->dat.detect_dat.mode_status=startup_mode;
                       crc_check=crc16(launch_detect_data,510);                          
@@ -446,7 +450,7 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                       accel_count_for_launch_test=0;
                       result = mmcWriteBlock(SDaddr,(unsigned char*) launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
                       SDaddr+=1;//memory card is block address
-                      LED_3_OFF();
+                      //LED_3_OFF();
                       ACCoff();
                       GyroSleep();
                       mmc_pins_off();//SHUT DOWN THE SD CARD SO IT WONT PULL UP THE VOLTAGE LINE FOR THE SENSORS ON/OFF POWR LINE 
@@ -466,13 +470,19 @@ printf("\rLEDL Sensor read test. Press s to stop. \r\n>");//
                       checking_launch=0;
                       printf("WE HAVE LAUNCH");
                       accel_count_for_launch_test=0;
+                      startup_mode=MODE_LAUNCH;
+                      launch_detect_data->dat.detect_dat.mode_status=startup_mode;
+                      crc_check=crc16(launch_detect_data,510);                          
+                      launch_detect_data->crc=crc_check;//put crc in last spot of data
                       result = mmcWriteBlock(SDaddr, (unsigned char*) launch_detect_data); //(unsigned char*) casting my pointer(array) as a char 
                       launch_detect_data->dat.detect_dat.SDaddress=SD_BECON_DATA;//since we are storing this in location zero, the address should say zero 
                       crc_check=crc16(launch_detect_data,510);                          
                       launch_detect_data->crc=crc_check;//put crc in last spot of data
+                      //result=mmcErase(SD_BECON_DATA,SD_BECON_DATA);
+                      ctl_timeout_wait(ctl_get_current_time()+100);//4.88 MS IS 5
                       result = mmcWriteBlock(SD_BECON_DATA ,(unsigned char*) launch_detect_data);//store that launch happened in the first spot
                       SDaddr+=1;//memory card is block address
-                      P4OUT^=BIT5; 
+                      //P4OUT^=BIT5; 
                       }//closes else, launch has been verified before it died for some reason, the code will pick up where it left off in the count.   
           ctl_task_run(&SD_card,BUS_PRI_EXTRA_HIGH,(void(*)(void*))writedatatoSDcard,NULL,"writedatatoSDcard",sizeof(stack4)/sizeof(stack4[0])-2,stack4+1,0);//set up task to run SD card, 
 
@@ -799,32 +809,62 @@ void writedatatoSDcard(void)
 unsigned char remote_EPS_cmd[2];
 
 //create an event to take I2C data 
-void takeI2Cdata(void)
-{
-int k=0;
-int l=0;
-unsigned get_I2C_data;
-for(;;){//take temperature data 
-        get_I2C_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_I2C_data,LEDL_EV_ALL,CTL_TIMEOUT_NONE,0);
-        if (get_I2C_data&(LEDL_EV_GET_TEMP_DATA)){
-          Temp_I2C_sensor(temp_measure);
-        }
-        if(get_I2C_data&(LEDL_EV_EPS_CMD)){
-          //lock mutex
-          if(ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,1000)){
-            //send command to EPS
-            i2c_tx(EPS_I2C_ADDRESS,remote_EPS_cmd,2);
-            //unlock mutex
-            ctl_mutex_unlock(&EPS_mutex);
-          }else{
-            //TODO: report error
-            //trigger event again            
-            ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_EPS_CMD,0);
-            //TODO : timeout?
-          }
-        }
-       }
+void takeI2Cdata(void){
+  int k=0;
+  int l=0;
+  int resp;
+  unsigned get_I2C_data;
+  unsigned char *buffer;
+  for(;;){//take temperature data 
+    get_I2C_data=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_get_I2C_data,LEDL_EV_ALL,CTL_TIMEOUT_NONE,0);
+    if (get_I2C_data&(LEDL_EV_GET_TEMP_DATA)){
+      Temp_I2C_sensor(temp_measure);
+    }
+    if(get_I2C_data&(LEDL_EV_EPS_CMD)){
+      //lock mutex
+      if(ctl_mutex_lock(&EPS_mutex,CTL_TIMEOUT_DELAY,1000)){
+        //send command to EPS
+        i2c_tx(EPS_I2C_ADDRESS,remote_EPS_cmd,2);
+        //unlock mutex
+        ctl_mutex_unlock(&EPS_mutex);
+      }else{
+        //TODO: report error
+        //trigger event again            
+        ctl_events_set_clear(&handle_get_I2C_data,LEDL_EV_EPS_CMD,0);
+        //TODO : timeout?
       }
+    }
+    if(get_I2C_data&(LEDL_EV_SEND_DAT)){
+      buffer=BUS_get_buffer(CTL_TIMEOUT_DELAY,500);
+      if(buffer!=NULL){
+        //set block 
+        buffer[0]=SPI_LEDL_DAT;
+        buffer[1]=BUS_ADDR_LEDL;
+        //read block into buffer
+        resp=mmcReadBlock(SD_read_addr,buffer+2);
+        //check response
+        if(resp==RET_SUCCESS){
+          //send data to COMM
+          resp=BUS_SPI_txrx(BUS_ADDR_COMM,buffer,NULL,512 + 2);
+          //check result
+          if(resp!=RET_SUCCESS){
+            //TODO: handle error
+          }
+        }else{
+          //TODO: handle error
+        }
+        //done with buffer, free it
+        BUS_free_buffer();
+      }
+    }
+    if(get_I2C_data&(LEDL_EV_BLOW_FUSE)){
+      LEDL_BLOW_FUSE();
+    }
+    if(get_I2C_data&(LEDL_EV_STATUS_TIMEOUT)){
+      reset(ERR_LEV_INFO,ERR_SRC_LEDL,STAT_TIMEOUT,0);
+    }
+  }
+}
 
 
 //create an event to take clyde data 

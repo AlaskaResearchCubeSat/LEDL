@@ -22,7 +22,10 @@
   
   #define LEDL_EV_GET_TEMP_DATA  0x01
   #define LEDL_EV_EPS_CMD        0x02
-  #define LEDL_EV_ALL            (LEDL_EV_EPS_CMD|LEDL_EV_GET_TEMP_DATA)
+  #define LEDL_EV_SEND_DAT       0x04
+  #define LEDL_EV_BLOW_FUSE      0x08
+  #define LEDL_EV_STATUS_TIMEOUT 0x10
+  #define LEDL_EV_ALL            (LEDL_EV_EPS_CMD|LEDL_EV_GET_TEMP_DATA|LEDL_EV_SEND_DAT|LEDL_EV_BLOW_FUSE|LEDL_EV_STATUS_TIMEOUT)
 
   #define CLYDE_EV_GET_DATA     0x01
   #define LaunchData_flag       0x01

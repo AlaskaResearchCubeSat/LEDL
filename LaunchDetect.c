@@ -49,6 +49,8 @@ void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt fu
   if (P2IFG&BIT7){
 
                   P2IFG &= ~BIT7;
+                  BUS_lp_mode=ML_LPM0;
+
                   //this is for launch 
                   ctl_events_set_clear(&handle_LaunchDetect,1<<0,0);//this is for use during analysis of if there is a current launch happening                     
                    //use these two when doing testing 

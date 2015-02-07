@@ -63,7 +63,7 @@ ARC_setup_lv();//sets up initializes the clocks and should be called at the begi
 //Initialize the uart to talk with terra term 
 P4DIR |= BIT1|BIT2|BIT3|BIT5|BIT6|BIT7;//LIGHT UP LED'S AS OUTPUTS 
 P4OUT &= ~(BIT1|BIT2|BIT3|BIT5|BIT6|BIT7);
-P4OUT |= BIT5;
+//P4OUT |= BIT5;
 VREGinit();//INITALIZE THE VOLTAGE REGULATOR 
 //initUART();//initalize when using TxChar(ch)
 //setup I2C for use of UCB1 
@@ -85,8 +85,8 @@ RESET_LED();
 
 
 //Initialize the main task 
-initARCbus(BUS_ADDR_LEDL);
-
+initARCbus_pd(BUS_ADDR_LEDL);
+// initARCbus(BUS_ADDR_LEDL);
 
 //run MSP test
 /*
@@ -156,7 +156,9 @@ ctl_task_run(&ACDS_sen_task,BUS_PRI_LOW+10,ACDS_sensor_interface,NULL,"ACDS_sens
 //for(;;){// taken care of in main loop
 //P5SEL |= BIT6;//OUTPUT aclk
 //P5DIR |= BIT6;//output aclk
-//mainLoop_lp();
+
+mainLoop_lp();
+
 mainLoop();
 
 }

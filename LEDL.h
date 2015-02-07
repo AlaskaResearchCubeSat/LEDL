@@ -21,7 +21,7 @@
   extern int clyde_data[CLYDE_ARRAY_SIZE];
   extern int temp_measure[TEMP_ARRAY_SIZE];
   
-  
+  extern SD_block_addr SD_read_addr;
 
   extern arr;
   extern switch_is_on;

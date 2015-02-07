@@ -11,16 +11,16 @@
 #include "LEDL.h"
 
   void CLYDE_STAT_LED_toggle(void){
-  P4OUT^=BIT3;
+  //P4OUT^=BIT3;
   }
 
   void LEDL_STAT_LED_toggle(void){
-  P4OUT^=BIT2;
+  //P4OUT^=BIT2;
   }
 
   void ERR_LED_on(void)
  {
- P4OUT^=BIT5;
+ //P4OUT^=BIT5;
  }
  
 void sub_events(void *p) __toplevel{
@@ -35,6 +35,7 @@ void sub_events(void *p) __toplevel{
   if (P1IN&BIT0)
   {
   ctl_events_set_clear(&SUB_events,SUB_EV_INT_0,0);
+  BUS_lp_mode=ML_LP_EXIT;
   }
   //initialize EPS mutex
   ctl_mutex_init(&EPS_mutex);
@@ -43,15 +44,19 @@ void sub_events(void *p) __toplevel{
     e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&SUB_events,SUB_EV_ALL,CTL_TIMEOUT_NONE,0);
     if(e&SUB_EV_INT_0){
       //CDH is on
-      //switch has just been selected, switch_is_on is checked for initial conditions and enters this code to begin taking data. 
+      //switch has just been selected, switch_is_on is checked for initial conditions and enters this code to begin taking data.
                     volatile unsigned int *arr = &ADC12MEM8;// creates a pointer, looks at the memory of mem0
                     int resp; 
                     int *buffer=NULL;//changed from char to int instead of each char being 1 byte their are now two bytes, resulting in being half as many things to index 
                     unsigned long SDaddr_for_total_blocks_used=0;
                     LEDL_TEST_LAUNCH *launch_detect_data;
-                   int mmcReturnValue;
-                   startup_mode=MODE_ORBIT;
-                   switch_is_on=0;//turn off launch code
+                    int mmcReturnValue;
+                    BUS_lp_mode=ML_LP_EXIT;
+                    startup_mode=MODE_ORBIT;
+                    switch_is_on=0;//turn off launch code
+
+                     LED_3_ON();
+                                  
                    
                    //turn up the voltage
                    //NEED TO BLOW FUSE CODE 
@@ -139,7 +144,11 @@ void sub_events(void *p) __toplevel{
                    clyde_status.clyde_array_fifteen[i]=clyde_data[i];
                    }    
       
-
+      
+      //free alarm so that we can reset it
+      BUS_free_alarm(BUS_ALARM_0);
+      //set alarm to trigger 100s from now
+      BUS_set_alarm(BUS_ALARM_0,get_ticker_time()+100ul*1024ul,&handle_get_I2C_data,LEDL_EV_STATUS_TIMEOUT);
     }
     if(e&SUB_EV_PWR_OFF){
         //print message
@@ -159,7 +168,7 @@ void sub_events(void *p) __toplevel{
             int *buffer=NULL;//changed from char to int instead of each char being 1 byte their are now two bytes, resulting in being half as many things to index 
             
             LEDL_TEST_LAUNCH *launch_detect_data;
-
+           LED_3_ON();
            ADC12CTL0&=~ENC;     //disable ADC
            ADC12CTL1&=~CSTARTADD_15;   //clear CSTARTADD
            ADC12CTL1|= CSTARTADD_8;    // CSTARTADD
@@ -261,8 +270,10 @@ void sub_events(void *p) __toplevel{
                    clyde_status.clyde_array_fifteen[i]=clyde_data[i];
                    }    
       
-
-                  
+       //free alarm so that we can reset it
+      BUS_free_alarm(BUS_ALARM_0);
+      //set alarm to trigger 100s from now
+      BUS_set_alarm(BUS_ALARM_0,get_ticker_time()+100ul*1024ul,&handle_get_I2C_data,LEDL_EV_STATUS_TIMEOUT);
 
     }
 

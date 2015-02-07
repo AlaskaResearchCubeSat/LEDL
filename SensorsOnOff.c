@@ -168,11 +168,11 @@ P7OUT &= ~(BIT0|BIT1|BIT6);
 }
 
 void SD_LED(void){
-P4OUT ^= BIT1;
+//P4OUT ^= BIT1;
 }
 
 void RESET_LED(void){
-P4OUT ^= BIT0;
+//P4OUT ^= BIT0;
 }
 
 void SD_LED_OFF(void){
@@ -186,7 +186,7 @@ P7OUT&=~BIT2;
 
 void LEDL_BLOW_FUSE(void){
 P7OUT|=BIT5;
-ctl_timeout_wait(ctl_get_current_time()+100);//wait for voltage on sd card to stabalize 
+ctl_timeout_wait(ctl_get_current_time()+100);//wait for transistor to turn on 
 P7OUT&=~BIT5;
 }
 
@@ -200,7 +200,7 @@ P4OUT &=~BIT3;
 
 
 void LED_2_ON(void){
-P4OUT|=BIT2;
+//P4OUT|=BIT2;
 }
 
 void LED_2_OFF(void){
@@ -208,7 +208,7 @@ P4OUT &=~BIT2;
 }
 
 void LED_1_ON(void){
-P4OUT|=BIT1;
+//P4OUT|=BIT1;
 }
 
 void LED_1_OFF(void){

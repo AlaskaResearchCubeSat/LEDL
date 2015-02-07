@@ -190,6 +190,10 @@ int clyde_take_data(int *array){
     //error msg or success
     if(res<0){
       //printf("tx returned = %s\r\n",I2C_error_str(res));
+      //set invalid value
+      array[i]=0xF800;
+      //skip to the next channel
+      continue;
     }
     //wait 1.2 ms (300)
     ctl_timeout_wait(ctl_get_current_time()+5);
@@ -198,6 +202,10 @@ int clyde_take_data(int *array){
     //error msg or success
     if (res<0){
       //printf("rx returned = %s\r\n",I2C_error_str(res));
+      //set invalid value
+      array[i]=0xF800;
+      //skip to the next channel
+      continue;
     }
     rez=rx[1];
     rez|=rx[0]<<8;
@@ -220,12 +228,15 @@ int clyde_take_data(int *array){
   //error msg or success
   if(res!=0){
     //printf("%s\r\n",I2C_error_str(res));
-  }
-  rez=rx[1];
-  rez|=rx[0]<<8;
+    //invalid value
+    array[i]=0xFFFF;
+  }else{
+    rez=rx[1];
+    rez|=rx[0]<<8;
 
-  printf("rez = 0x%04X\r\n",rez);
-  array[i]=(int)rez;
+    printf("rez = 0x%04X\r\n",rez);
+    array[i]=(int)rez;
+  }
   //unlock the EPS
   ctl_mutex_unlock(&EPS_mutex);
   //return success
