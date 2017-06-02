@@ -17,56 +17,6 @@
 #include "Error_src.h"
 
 
-/*
-void ADC_test(void){
-
- 
- unsigned long test=0;//counter for rows also called SFID
-  int accel_count=0;//counter to display last two rows of data
-  int gyro_count=0;//counter to display gyro
-  int frame_100=0;//counter to display temperature 
-  int temp_display=0;//counter to display zeros or temp
-  int i; //counter to cycle through six adc measurements 
-  int signal_mux=0;// making signal that will cause mux to switch between gyro 2 (G2) when signal_mux=0 and gyro 3 (G3) when signal_mux=1 
-  int k; //counter for loops of reading data 
-  int ADCread;
- 
-
-printf("\rLEDL ADC test\r\n");// 
-printf("\rmeasure voltage with the MSP ADC.\r\n");
-printf("\rtest#\tA0\tA1\tA2\tA3\tA4\tA5\tA6\tA7\r\n");//gives a column title
-  timersetup4kHz();//start timer
- // timersetup();//start timer
-  adcsetup();//adc setup
-   __enable_interrupt();// THIS IS A PREDEFINED GLOBAL INTERRUPT ENABLE BIT IN THE MSP LIBRARY 
-  
-
-  //for(;;)
-  for(k=0;k<2;k++)//make two loops to makes measurements 
-  {
-    volatile unsigned int *arr = &ADC12MEM0;// creates a pointer, looks at the memory of mem0
-    //while(handle_adc!=0)//in adc interrupt handle_adc is set high, so this code can become initialized
-    {
-      handle_adc = 0;//reset my personal flag to zero
-      if (accel_count==0)// only when accel_count=0 will the row number be displayed
-      {
-      printf("%d\t", test);//prints row number
-      test++;//add count to test 
-      }  
-        for (i=0; i<8; ++i)// print first 6 adc measurements  
-         {
-          printf("%d\t", arr[i]);
-         }  
-
-         printf("\r\nPlace the results in Document ARC1-LEDL-TST-LEDLPROTO-R01 section ADC Test.\r\n");
-         printf("When finished press the space bar to continue.\r\n");
-         while(ADCread!=' '){//continues to check to see if the space bar was hit.  
-         ADCread = getchar();//We expect the ascii key for return to be in the return value.  
-         }ADCread=0;
-     }
-    }
-    }
-*/
 CTL_EVENT_SET_t handle_SDcard;
 CTL_EVENT_SET_t handle_get_I2C_data;
 CTL_EVENT_SET_t handle_get_mag_data;
@@ -209,8 +159,8 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
            VREGoff();//turn Voltage regulator off for low power application
    */        
 
-           WDT_STOP();
-           BUS_lp_mode=ML_LPM0;
+          // WDT_STOP();//reset for LEDL run code 
+           //BUS_lp_mode=ML_LPM0;
            
            //Code that checks the launch detect
            checking_for_launch=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_LaunchData,LAUNCHDATA_FLAG,CTL_TIMEOUT_NONE,0);
@@ -247,19 +197,23 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
               GyroWakeUp();
               SENSORSon();
               //initalize the SD card   
-              mmc_pins_on();
+              mmcReturnValue=mmc_is_init(); 
+              if (mmcReturnValue<0){
+              mmcInit_msp();  // Sets up the interface for the card
+              mmc_pins_on();  //Sets up MSP to talk to SD card
               mmcReturnValue=mmcInit_card();
-              if (mmcReturnValue==MMC_SUCCESS){
-              printf("\rCard initalized Sucessfully\r\n");
-              LED_6_ON();
               }
-              else {
-              printf("\rERROR initalizing SD card""\r\n Response = %i\r\n %s", mmcReturnValue,SD_error_str(mmcReturnValue));
-                   }
+              if (mmcReturnValue==MMC_SUCCESS){ // check good initialization 
+                printf("\rCard initalized Sucessfully\r\n");
+              }
+              else{
+                printf("Check SD card.\r\nInitalized failed.\r\n Error %i\r\n",mmcReturnValue);
+              }
+
               //check to see what last stored data location is on SD card
               result=mmcReadBlock(SD_BECON_DATA,(unsigned char*)buffer);
               //store data into SDaddr
-              SDaddr=launch_detect_data->dat.detect_dat.SD_last_address;
+              //SDaddr=launch_detect_data->dat.detect_dat.SD_last_address;
               //check to see that the value saved is greater than 100, if it is zero than there is no data saved, if it is less than 100 than it needs to start at 100. 
               if(SDaddr<1000){SDaddr=SD_LAUNCH_DATA_START;}
               //even though we may have the last address used, just in case the code will check that is is empty. 
@@ -282,14 +236,17 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                           mmc_pins_on();
                           mmcReturnValue=mmcInit_card();
                           if (mmcReturnValue==MMC_SUCCESS){
-                          printf("\rCard initalized Sucessfully\r\n");
                           LED_6_ON();
                           count_error=0;
+                          printf("\rCard initalized Sucessfully\r\n");
+                          }
+                          else{
+                          printf("Check SD card.\r\nInitalized failed.\r\n Error %i\r\n",mmcReturnValue);
                           }
 
                        }
                      }
-                      if(launch_detect_data->ledl_address!=LEDL_DATA_ID)
+                      if(launch_detect_data->ledl_address==LEDL_DATA_ID|launch_detect_data->ledl_address==LEDL_DETECT_ID )
                       {
                       //this value starts at either 100 or at the first empty spot found in increments of 1000 
                       SDaddr=SDaddr+1000;
@@ -310,9 +267,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                     
                 }
        
-
-
-
+           //logSDaddr=132000;
             while(switch_is_on)//this statement is for use with external switch or can be left during actual launch and we will have to make sure it is include for P2.7 interrupt for piezo tab
             {
            
@@ -324,9 +279,11 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                   //handle_adc = 0;//reset my personal flag to zero //I do not use this with events
                       //LAUNCH_LED_ON(); //LIGHT UP LED WHEN TAKING DATA 
                       extern adctemparray1[6]; 
-                      
+                    
+                      //printf("ADC interrupt triggered time %lu\r\n",get_ticker_time());
                       if (data==0)
                       {
+
                       launch_data[data]=LEDL_DATA_ID;
                       data++;
                       temperory_SDaddr=SDaddr;
@@ -337,8 +294,8 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
 
                       }
                       if (accel_count==0)// only when accel_count=0 will the row number be displayed
-                      {
-                      //printf("%d\t", row);//prints row number
+                      {                      
+                      
                       launch_data[data]=frame;
                       data++;
                       launch_data[data]=row;
@@ -394,6 +351,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                      // Temp_I2C_sensor(temp_measure);//here is the first temperature measurement passing an array 7 length long //at some point I will need to measure temperature sensors as a 
                                       //different task so that as I am waiting for the the return values I can be taking my other measurements. 
                                       //printf("%d\t",temp_measure[0]);//this is the spot for temperature data
+                                     
                                       launch_data[data]=temp_measure[0];
                                       data++;
                                       }//closes if (frame_100==100)
@@ -409,6 +367,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       data++;
                                       }//closes else
                                       temp_display++;
+                                     // printf("End of first row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 1:
                                       if (frame_100==100)
@@ -424,6 +383,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       data++;
                                       }//closes else 
                                       temp_display++;
+                                    //  printf("End of first second row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 2:
                                       if (frame_100==100)
@@ -439,6 +399,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       data++;
                                       }//closes else 
                                       temp_display++;
+                                     // printf("End of first third triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 3:
                                       if (frame_100==100)
@@ -454,6 +415,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       data++;
                                       }//closes else
                                       temp_display++;
+                                     // printf("End of fourth row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 4:
                                       if (frame_100==100)
@@ -469,6 +431,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       data++;
                                       }//closes else
                                       temp_display++;
+                                     // printf("End of fifth row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 5:
                                       if (frame_100==100)
@@ -484,6 +447,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       data++;
                                       }//closes else
                                       temp_display++;
+                                     // printf("End of sixth row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 6:
                                       if (frame_100==100)
@@ -501,6 +465,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       frame_100++;
                                       }//closes else 
                                       temp_display++;
+                                     // printf("End of seventh row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 7:
                                       ticker_time=get_ticker_time();                 
@@ -511,6 +476,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       launch_data[data]=time1;
                                       data++;
                                       temp_display++;
+                                     // printf("End of eighth row triggered time %lu\r\n",get_ticker_time());
                                       break;
                                     case 8: 
                                       //printf("%u\t",time2);
@@ -530,6 +496,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                       ctl_events_set_clear(&handle_SDcard,SD_EV_WRITE_1,0);
                                       //result = mmcWriteBlock(SDaddr,(unsigned char*) launch_data1); //(unsigned char*) casting my pointer(array) as a char 
                                       //SD_LED();
+                                      P7OUT^=BIT5;
                                       launch_data=launch_data2;
                                       }//closes if(launch_data==launch_data1)
                                       else 
@@ -539,8 +506,10 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
                                        //result= mmcWriteBlock(SDaddr,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char 
                                        //SD_LED(); 
                                        launch_data=launch_data1;
+                                       P7OUT^=BIT4;
                                       }//closes else                         
                                       temp_display=0;
+                                     // printf("End of ninth row triggered time %lu\r\n",get_ticker_time());
                                      break; 
                                       //add a count for incrementing frame number
                                     }//closes switch (temp_display) 
@@ -607,76 +576,91 @@ void writedatatoSDcard(void)
   unsigned countforLED=0; 
   unsigned long SD_card_write_time;
   unsigned SD_card_write;
-  unsigned count_error; 
+  unsigned count_error=0; 
   int mmcReturnValue;
+  unsigned short SDaddrhigh, SDaddrlow; 
   
   for(;;){//I may want to add code that looks for a new spot to put data if there is data in code(SD card code). 
       SD_card_write=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_ALL,CTL_TIMEOUT_NONE,0);//the 7 means your looking at all 3 flags 
          if(SD_card_write&(SD_EV_WRITE_1))
            {  //SD_card_write_time=get_ticker_time();  
              // printf("SD card write start %u\t",get_ticker_time());
+              //printf("time start data save %lu\r\n",get_ticker_time());                
               result = mmcWriteBlock(SDaddr,(unsigned char*) launch_data1); //(unsigned char*) casting my pointer(array) as a char 
+             // printf("time end data save %lu\r\n",get_ticker_time());  
+             // printf("SD card 1 returned %i\r\n",result);
+              P7OUT^=BIT3;
               if(result<0){
               LED_5_ON();
                 count_error++;
-                 if(count_error==3)
+                 if(count_error<=3)
                    {
-                      SENSORSon();
-                      //initalize the SD card   
-                      mmc_pins_on();
-                      mmcReturnValue=mmcInit_card();
-                      if (mmcReturnValue==MMC_SUCCESS){
-                      printf("\rCard initalized Sucessfully\r\n");
-                      count_error=0;
-                      }
-                   }
-              }
-              else{
-              LED_5_OFF();
-              SDaddr+=1;//memory card is block address
-              //printf("SD card #1 returned, %i\r\n",result);
-              //SD_card_write_time=get_ticker_time();  
-              //printf("SD card write finish %u\t",get_ticker_time());
-              countforLED++;
-              if (countforLED==100)
-              {
-              SD_LED();
-              countforLED=0;
-              }
-              }
-              
-              }
-      if(SD_card_write&(SD_EV_WRITE_2))
-           {
-              result= mmcWriteBlock(SDaddr,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char 
-              if(result<0){
-              LED_5_ON();
-               count_error++;
-                 if(count_error==3)
-                    {
                     SENSORSon();
                     //initalize the SD card   
                     mmc_pins_on();
                     mmcReturnValue=mmcInit_card();
-                    if (mmcReturnValue==MMC_SUCCESS){
-                    printf("\rCard initalized Sucessfully\r\n");
-                    count_error=0;
-                    }
-                    }
+                      if (mmcReturnValue==MMC_SUCCESS){
+                        printf("\rCard initalized Sucessfully\r\n");
+                        }
+                        else{
+                        printf("Check SD card.\r\nInitalized failed.\r\n Error %i\r\n",mmcReturnValue);
+                        }
+                     count_error=0;
+                   }
               }
               else{
-              LED_5_OFF();
-              SDaddr+=1;//memory card is block address
-           //   printf("SD card #2 returned, %i\r\n",result);
-              countforLED++;
-              if (countforLED==100)
-              {
-              SD_LED();
-              countforLED=0;
-              }
+                LED_5_OFF();
+                SDaddr+=1;//memory card is block address
+                //printf("SD card #1 returned, %i\r\n",result);
+                //SD_card_write_time=get_ticker_time();  
+               // printf("SD card write finish %u\t",get_ticker_time());
+                countforLED++;
+                  if (countforLED==100)
+                  {
+                  SD_LED();
+                  countforLED=0;
+                  }
               }
               
-            }
+           }
+      if(SD_card_write&(SD_EV_WRITE_2))
+           {
+             // printf("time start data save %lu\r\n",get_ticker_time());
+              result= mmcWriteBlock(SDaddr,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char 
+             // printf("time end data save %lu\r\n",get_ticker_time());
+             // printf("SD card 2 returned %i\r\n",result);
+              P7OUT^=BIT2;
+                if(result<0){
+                LED_5_ON();
+                 count_error++;
+                   if(count_error<=3)
+                      {
+                      SENSORSon();
+                      //initalize the SD card   
+                      mmc_pins_on();
+                      mmcReturnValue=mmcInit_card();
+                        if (mmcReturnValue==MMC_SUCCESS){
+                        printf("\rCard initalized Sucessfully\r\n");
+                        }
+                        else{
+                        printf("Check SD card.\r\nInitalized failed.\r\n Error %i\r\n",mmcReturnValue);
+                        }
+                      count_error=0;
+                      }
+                }
+                else{
+                LED_5_OFF();
+                SDaddr+=1;//memory card is block address
+                //printf("SD card #2 returned, %i\r\n",result);
+                countforLED++;
+                  if (countforLED==100)
+                  {
+                  SD_LED();
+                  countforLED=0;
+                  }
+              }
+              
+           }
       if(SD_card_write&(SD_EV_DIE))
           {
            int SDaddr_for_total_blocks_used=0;
@@ -685,11 +669,15 @@ void writedatatoSDcard(void)
            result= mmcWriteBlock(SDaddr_for_total_blocks_used,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char   
            ctl_events_set_clear(&handle_SDcard,SD_EV_FINISHED,0);//this is to tell that the SD card is finished writing and can be shut down if necessary 
           //  printf("SD card shutdown \r\n");
+          LED_5_OFF();
+          printf("SD_Event Die \r\n"); 
+          ctl_events_set_clear(&handle_SDcard,0,SD_EV_DIE);//this sends the flag to allow for the SD card to shut down 
            return;
-           LED_5_OFF();
+           
           }
-         }
+       
          
+}
 }
 
 //data for EPS commands sent over I2C

@@ -10,19 +10,24 @@ int adctemparray1[6];
 int readvalue;
 extern int adctemp; 
 CTL_EVENT_SET_t handle_adc;
-int i=0;
+int adccount=0;
+int check_adc_read; 
 //int handle_adc; 
 //added the interrupt if statements for each memory location 
 void adc_int(void) __interrupt[ADC10_VECTOR]{//this is an interrupt function the _interrupt tells its a function interrupt 
  switch (ADC10IV){
 
- case ADC10IV_ADC10IFG://: conversion ready Interrupt
-   //ctl_events_set_clear(&handle_adc,1<<0,0);
-   adctemp=ADC10MEM0;
-   adctemparray1[i]=ADC10MEM0;
-   ctl_events_set_clear(&SYS_evt,SYS_EV_1,0);
-   i++; 
-   if(i==5){i=0;}
+ case ADC10IV_ADC10IFG://: conversion ready Interrupt 
+  // adctemp=ADC10MEM0;
+   check_adc_read=ADC10MCTL0; 
+   adctemparray1[adccount]=ADC10MEM0|(check_adc_read<<13);
+   adccount++; 
+   if(adccount==5){
+   //ctl_events_set_clear(&SYS_evt,SYS_EV_1,0);
+   ctl_events_set_clear(&handle_adc,1<<0,0);
+   adccount=0;
+   P7OUT^=BIT6;
+   }
  break ;
  
  case ADC10IV_ADC10INIFG: //window comparator Interrupt flags
@@ -49,7 +54,9 @@ void adcsetup(void){
   P1SEL1 = 0X3F; // DISABLES THE DITIGAL FUNCTION OF PORT 1. sets up for ADC10_A function 
   //BITS SET TO DEFINE ADC12 FOR SINGLE CHANNEL MODE
   ADC10CTL0 |= ADC10SHT_3 | ADC10ON  | ADC10MSC; // SAMPELING FOR 32 CLOCK CYCLES | ADC12 IS ON | CONVERT AUTOMATICALLY MULTISAMPMODE
-  ADC10CTL1 |= ADC10SHS_0 | ADC10SHP | ADC10DIV_0 | ADC10SSEL_1 | ADC10CONSEQ_1; // triggers off of ADC10SC bit | SAMPCON signal is sorced from the sampeling timer
+ // ADC10CTL1 |= ADC10SHS_0 | ADC10SHP | ADC10DIV_0 | ADC10SSEL_0 | ADC10CONSEQ_1; // triggers off of SHS | SAMPCON signal is sorced from the sampeling timer
+ // divide by 1 | clock select ACLK | sequence of channels 
+  ADC10CTL1 |= ADC10SHS_0 | ADC10SHP | ADC10DIV_1 | ADC10SSEL_3 | ADC10CONSEQ_1; // triggers off of SHS | SAMPCON signal is sorced from the sampeling timer
    // divide by 1 | clock select SMCLK | sequence of channels 
   ADC10CTL2 |= ADC10PDIV0 | ADC10RES | ADC10SR; // PREDEVIDE BY 1 | 10 BIT RES | LIMITS SAMPELING TO 50 KSPS (REDUCE CURRENT)
   //enable interrupt OF DATA READY 
@@ -58,7 +65,6 @@ void adcsetup(void){
   ADC10MCTL0 = ADC10SREF_0 | ADC10INCH_5; //USED SOURCE VOLTAGE TO COMPARE RAILS | INPUT CHANNEL start IS A5
  
   ADC10IFG = 0; // SET ALL FLAGS TO 0
-   start_ADC_sampeling();
 
 }
 
@@ -74,11 +80,11 @@ void stop_ADC_sampeling(void){
 
 void init_timerA3(void){
   //setup timer A 
-  TA3CTL=TASSEL_1|ID_0|TACLR;//AClK
+  TA3CTL=TASSEL_1|ID_0|TACLR;//TASSEL_2 AClK 
   //init CCR0 for tick interrupt
   //TACCR0=32;
  // TACCTL0=CCIE; 
-  TA3CCR0=3000;
+  TA3CCR0=8;
   TA3CCTL0=OUTMOD_4|CCIE;
 }
 
@@ -91,13 +97,16 @@ void start_timerA3(void){
 
  void stop_timerA3(void){
  //turn off timer 
-  TA3CTL&=~MC_2;
+  TA3CTL&=~MC_3;
+  adccount=0;
  }
 
 void task_tick_forADC(void) __ctl_interrupt[TIMER3_A0_VECTOR]{
         //set rate to 8000Hz to change this later on, change the TACCR0+=4 for final value to take accelerometer data at 4kHz 
-        TA3CCR0+=32000;
+        TA3CCR0+=14;
         //increment timer
         //start adc 
-        start_ADC_sampeling(); 
+         start_ADC_sampeling(); 
+         P7OUT^=BIT7;
+     
 }

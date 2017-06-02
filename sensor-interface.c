@@ -471,85 +471,8 @@ short single_sample(unsigned short addr,short *dest){
   //TODO: provide real return codes
   return 0;
 }*/
-
-unsigned char mag_tx_addr=BUS_ADDR_ACDS;
-
-void ACDS_sensor_interface(void *p) __toplevel{
-    unsigned int e;
-    unsigned char buff[BUS_I2C_HDR_LEN+sizeof(magMem)+2+BUS_I2C_CRC_LEN],*ptr;
-    int i,j,res;
-    const char axc[3]={'X','Y','Z'};
-    //initialize event set
-    ctl_events_init(&sens_ev,0);
-    //stop sensors
-    stop_sensors();
-    //event loop
-    for(;;){
-        e=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&sens_ev,SENS_EV_READ,CTL_TIMEOUT_NONE,0);
-        if(e&SENS_EV_READ){
-            //read data from magnetometers
-            res=do_conversion();
-            //check result
-            if(res==0){
-                for(i=0;i<6;i++){
-                    //print out values from first axis
-                    if(magFlags&(1<<(i*2))){
-                        //value good, print
-                        printf("%- 11i\t",magMem[i].c.a);
-                    }else{
-                        //value not good, print error
-                        printf(" %-11s\t","Error");
-                    }
-                    //print out values form b-axis
-                    if(magFlags&(1<<(i*2+1))){
-                    //value good, print
-                    printf("%- 11i\r\n",magMem[i].c.b);
-                    }else{
-                        //value not good, print error
-                        printf(" %-11s\r\n","Error");
-                    }
-                }
-                //setup packet 
-                ptr=BUS_cmd_init(buff,CMD_MAG_DATA);
-                //add magFlags to packet
-                *(unsigned short*)ptr=magFlags;
-                //copy data into packet
-                memcpy(ptr+2,magMem,sizeof(magMem));
-                //send packet
-                res=BUS_cmd_tx(mag_tx_addr,buff,sizeof(magMem)+2,0,BUS_I2C_SEND_FOREGROUND);
-                //check result
-                if(res<0){
-                    report_error(ERR_LEV_ERROR,SENP_ERR_SRC_ACDS_I2C,res,0);
-                    //turn on error LED
-                    com_err_LED_on();
-                }
-            }
-        }
-    }
-}
-
-//count and period to determine mag sampling
-MAG_TIME mag_time;
-
 //running interrupt count 
 short int_count;
-
-//start sampling timer for magnetometer 
-void run_sensors(unsigned short time,short count){
-  //set period
-  mag_time.T=time;
-  //set count
-  mag_time.n=count;
-  //initialize interrupt count
-  int_count=count;
-  //set interrupt time
-  TACCR2=readTA()+time;
-  //enable interrupt
-  TACCTL2=CCIE;
-  //turn off error LED's
-  com_err_LED_off();
-  sens_err_LED_off();
-}
 
 //stop sampling magnetometer
 void stop_sensors(void){

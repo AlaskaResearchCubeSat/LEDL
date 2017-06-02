@@ -28,11 +28,11 @@ void setup_launch_detect(void){
   ctl_events_init(&handle_LaunchData, 0);//this is for use with EMI testing, for actual satellite mission this will be set after the verification of there being a positive launch 
  //this is here for testing until i can figure out what is going on with Port 1 interrupt
  //ctl_events_init(&handle_OrbitData, 0);//this is for use when satellite makes it to orbit-
- P2DIR &= ~(BIT7|BIT6);//TURNS ONLY P2.7 and P2.6 as an input
- P2IES |=  BIT7;//sets up interrupt to be a high to low transition
+ P1DIR &= ~(BIT7|BIT6);//TURNS ONLY P2.7 and P2.6 as an input
+ P1IES |=  BIT7;//sets up interrupt to be a high to low transition
  
- P2IFG &= ~(BIT7|BIT6);//you clear the flag before the interrupt is set
- P2IE  |= BIT7|BIT6;//sets up interrupt 
+ P1IFG &= ~(BIT7|BIT6);//you clear the flag before the interrupt is set
+ P1IE  |= BIT7|BIT6;//sets up interrupt 
  
 }
 /*
@@ -104,11 +104,11 @@ void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt fu
  
 }
 */
-void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt function the _interrupt tells its a function interrupt 
+void verify_launch_int(void) __interrupt[PORT1_VECTOR]{//this is an interrupt function the _interrupt tells its a function interrupt 
 //placed in code that sets the flag
-  if (P2IFG&BIT7){
+  if (P1IFG&BIT7){
 
-                  P2IFG &= ~BIT7;
+                  P1IFG &= ~BIT7;
                   //BUS_lp_mode=ML_LPM0;
                   //use a counter to count how many times it triggers for each cycle 
                   vib_tab_count++;
@@ -122,12 +122,12 @@ void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt fu
                 
                   }
 
-  else if (P2IFG&BIT6){//this interrupt is used for testing purposes.
+  else if (P1IFG&BIT6){//this interrupt is used for testing purposes.
    //the stitch used is a push button switch. The switch is depressed and the interrupt input is connected to vcc momentarlly causing an interrupt. 
       extern unsigned checking_for_launch; 
       //P2IE&=~BIT6;//TURN OFF, IT MIGHT TRIGGER AN INTERRUPT
                        //turn off the flag 
-                       P2IFG &= ~BIT6;
+                       P1IFG &= ~BIT6;
                        
                        //switch has just been selected, switch_is_on is checked for initial conditions and enters this code to begin taking data. 
                        if (checking_for_launch==0)
@@ -152,23 +152,23 @@ void verify_launch_int(void) __interrupt[PORT2_VECTOR]{//this is an interrupt fu
                       }
 
         }
-  else if (P2IFG&BIT5){
-  P2IFG=0;
+  else if (P1IFG&BIT5){
+  P1IFG=0;
   }
-  else if (P2IFG&BIT4){
-  P2IFG=0;
+  else if (P1IFG&BIT4){
+  P1IFG=0;
   }
-  else if (P2IFG&BIT3){
-  P2IFG=0;
+  else if (P1IFG&BIT3){
+  P1IFG=0;
   }
-  else if (P2IFG&BIT2){
-  P2IFG=0;
+  else if (P1IFG&BIT2){
+  P1IFG=0;
    }
-  else if (P2IFG&BIT1){
-  P2IFG=0;
+  else if (P1IFG&BIT1){
+  P1IFG=0;
   }
   else  {
-  P2IFG=0;
+  P1IFG=0;
    }
  
 }

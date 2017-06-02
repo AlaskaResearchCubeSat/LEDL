@@ -6,9 +6,9 @@
 #include <UCA2_uart.h>        // UART setup 
 #include "pins.h"             // linked in bare_bones solution 
 #include "subsystem.h"        // linked in bare_bones solution 
+#include "log_data.h"
 
-
-CTL_TASK_t terminal_task,sub_task,sys_task,LEDL_events; // name your task (first thing to do when setting up a new task (1))
+CTL_TASK_t terminal_task,sub_task,sys_task,LEDL_events, I2C,LaunchData; // name your task (first thing to do when setting up a new task (1))
 
 //********************************************* allocate mem for tasks (2)
 //stack for terminal
@@ -19,6 +19,9 @@ unsigned sys_stack[1000];
 unsigned sub_stack[1000];
 //stack for LEDL Launch function 
 unsigned stack6[1+200+1];
+unsigned stack1[1+300+1];   
+unsigned stack3[1+200+1];
+
 
 //******************************************** redefine putchar and getchar 
 //make printf and friends use async
@@ -38,7 +41,9 @@ void main(void){
   P7DIR=0xFF;
   //init complete turn on LED0 and all others off
   P7OUT=0x1F;
+ 
 
+  
   //DO this first
   ARC_setup(); 
 
@@ -57,6 +62,11 @@ void main(void){
 
 
   // initialize stacks (3)
+  memset(stack1,0xcd,sizeof(stack1));//function memset, sets all values(array stack1, everything equals this value, 
+  //size of array so everything is changed)
+  stack1[0]=stack1[sizeof(stack1)/sizeof(stack1[0])-1]=0xfeed;//put marker values at the words before/after the stack.
+  memset(stack3,0xcd,sizeof(stack3));  // write known values into the stack
+  stack3[0]=stack3[sizeof(stack3)/sizeof(stack3[0])-1]=0xfeed; // put marker values at the words before/after the stack
   memset(terminal_stack,0xcd,sizeof(terminal_stack));                                           //write known values into the stack 
   terminal_stack[0]=terminal_stack[sizeof(terminal_stack)/sizeof(terminal_stack[0])-1]=0xfeed;  //put marker values at the words before/after the stack
   memset(sys_stack,0xcd,sizeof(sys_stack));                                                     //write known values into the stack 
@@ -74,7 +84,9 @@ void main(void){
   ctl_task_run(&sys_task,BUS_PRI_NORMAL,sys_events,NULL,"SYS_events",sizeof(sys_stack)/sizeof(sys_stack[0])-2,sys_stack-1,0);
   ctl_task_run(&sub_task,BUS_PRI_HIGH,sub_events,NULL,"SUB_events",sizeof(sub_stack)/sizeof(sub_stack[0])-2,sub_stack-1,0);
   ctl_task_run(&LEDL_events,BUS_PRI_NORMAL+10,sub_events,NULL,"sub_events",sizeof(stack6)/sizeof(stack6[0])-2,stack6+1,0);//this is to run orbit code
-
+  ctl_task_run(&I2C,BUS_PRI_NORMAL,(void(*)(void*))takeI2Cdata,NULL,"takeI2Cdata",sizeof(stack3)/sizeof(stack3[0])-2,stack3+1,0);
+  ctl_task_run(&LaunchData,BUS_PRI_HIGH,launch_data_log,NULL,"launch_data_log",sizeof(stack1)/sizeof(stack1[0])-2,stack1+1,0);//&LaunchData takes the address
+ 
   //mainLoop_lp();
   //main loop <-- this is an ARCbus function 
   mainLoop(); 

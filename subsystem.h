@@ -14,21 +14,6 @@ void sys_events(void *p);
 extern CTL_EVENT_SET_t SYS_evt;// This creates the event struct,change SYS to actual subsystem
 void writedatatoSDcard(void);
 
- typedef struct{
-      int ledl_address;
-      union{
-        struct{
-          long SDaddress; 
-          float accel_from_launch[4];//if I want to add any other data here I just need to add it and the size will always be the same due to the union
-          float max_and_min_from_launch[6];
-          int number_of_detect;
-          int mode_status; 
-          long SD_last_address;
-       }detect_dat;
-        unsigned char pad[508];
-      }dat;
-      unsigned short crc;
-  }LEDL_TEST_LAUNCH;//to use this specify what my structure name is and  call it name.dat.detect_dat.SDaddress
 
   #include <Error.h>
   #define TEMP_ARRAY_SIZE       7 //array is 7 16 byte column 
@@ -47,7 +32,6 @@ void writedatatoSDcard(void);
   #define SD_EV_WRITE_2         0x02 
   #define SD_EV_DIE             0x04
   #define SD_EV_FINISHED        0x08
-  
   #define SD_EV_ALL             (SD_EV_WRITE_1|SD_EV_WRITE_2|SD_EV_DIE|SD_EV_FINISHED)
   
   #define LEDL_EV_GET_TEMP_DATA  0x01

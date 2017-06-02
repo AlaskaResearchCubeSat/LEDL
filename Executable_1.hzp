@@ -36,8 +36,6 @@
       <file file_name="LaunchDetect.h" />
       <file file_name="log_data.h" />
       <file file_name="SensorsOnOff.h" />
-      <file file_name="sensor-interface.c" />
-      <file file_name="sensor-interface.h" />
       <file file_name="Error_src.h" />
     </folder>
     <folder Name="System Files">
