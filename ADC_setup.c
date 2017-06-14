@@ -6,7 +6,7 @@
 #include "subsystem.h"
 
 int adctemp; 
-int adctemparray1[6];
+  int adctemparray1[6];
 int readvalue;
 extern int adctemp; 
 CTL_EVENT_SET_t handle_adc;
@@ -80,7 +80,7 @@ void stop_ADC_sampeling(void){
 
 void init_timerA3(void){
   //setup timer A 
-  TA3CTL=TASSEL_1|ID_0|TACLR;//TASSEL_2 AClK 
+  TA3CTL=TASSEL_1|ID_0|TACLR;//TASSEL_2 SMClK TASSEL_1 ACLK
   //init CCR0 for tick interrupt
   //TACCR0=32;
  // TACCTL0=CCIE; 
@@ -103,7 +103,7 @@ void start_timerA3(void){
 
 void task_tick_forADC(void) __ctl_interrupt[TIMER3_A0_VECTOR]{
         //set rate to 8000Hz to change this later on, change the TACCR0+=4 for final value to take accelerometer data at 4kHz 
-        TA3CCR0+=14;
+        TA3CCR0+=8;
         //increment timer
         //start adc 
          start_ADC_sampeling(); 

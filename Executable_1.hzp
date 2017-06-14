@@ -47,7 +47,7 @@
     <configuration
       Name="Release"
       linker_additional_files="$(ARC_prefix)/lib/BUSlib_Release.hza;$(ARC_prefix)/lib/Error_printg_Release.hza;$(ARC_prefix)/lib/termlib_Release.hza;$(ARC_prefix)/lib/UART_UCA2_Release.hza;$(ARC_prefix)/lib/commandLib_Release.hza;$(ARC_prefix)/lib/SD-lib_err_Release.hza;$(ARC_prefix)/lib/SD-lib_UCA1_Release.hza;$(ARC_prefix)/lib/I2Clib_Release.hza;" />
-  </project>
+   </project>
   <configuration
     Name="MSP430 Debug"
     inherited_configurations="MSP430;Debug" />

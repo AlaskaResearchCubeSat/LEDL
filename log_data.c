@@ -36,10 +36,10 @@ int clyde_data[CLYDE_ARRAY_SIZE];
 int clyde_measure;
 int mag_measure;
 long wake_up_attempt=0;
-int result;
 
 
-unsigned stack4[1+300+1];//stacks need to be a globals 
+
+unsigned stack4[1+1200+1];//stacks need to be a globals 
 int startup_mode;
 
 extern vib_tab_count;
@@ -67,7 +67,7 @@ void launch_data_log(void *p){// used to set up code USE THIS ONE WITH THE TASK 
   int *launch_data;
   int crc_check;
   //SDaddr+=1; //address already starts at 65
-
+  int result;
   memset(stack4,0xcd,sizeof(stack4));  // write known values into the stack
   stack4[0]=stack4[sizeof(stack4)/sizeof(stack4[0])-1]=0xfeed; // put marker values at the words before/after the stack
 
@@ -579,14 +579,17 @@ void writedatatoSDcard(void)
   unsigned count_error=0; 
   int mmcReturnValue;
   unsigned short SDaddrhigh, SDaddrlow; 
-  
+  int result;
+  int var;
+  var=SD_DMA_is_enabled();
+  printf("DMA function returned %i",var);
   for(;;){//I may want to add code that looks for a new spot to put data if there is data in code(SD card code). 
       SD_card_write=ctl_events_wait(CTL_EVENT_WAIT_ANY_EVENTS_WITH_AUTO_CLEAR,&handle_SDcard,SD_EV_ALL,CTL_TIMEOUT_NONE,0);//the 7 means your looking at all 3 flags 
          if(SD_card_write&(SD_EV_WRITE_1))
            {  //SD_card_write_time=get_ticker_time();  
              // printf("SD card write start %u\t",get_ticker_time());
               //printf("time start data save %lu\r\n",get_ticker_time());                
-              result = mmcWriteBlock(SDaddr,(unsigned char*) launch_data1); //(unsigned char*) casting my pointer(array) as a char 
+     result = mmcWriteBlock(SDaddr,(unsigned char*) launch_data1); //(unsigned char*) casting my pointer(array) as a char 
              // printf("time end data save %lu\r\n",get_ticker_time());  
              // printf("SD card 1 returned %i\r\n",result);
               P7OUT^=BIT3;
@@ -626,7 +629,7 @@ void writedatatoSDcard(void)
       if(SD_card_write&(SD_EV_WRITE_2))
            {
              // printf("time start data save %lu\r\n",get_ticker_time());
-              result= mmcWriteBlock(SDaddr,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char 
+     result= mmcWriteBlock(SDaddr,(unsigned char*) launch_data2); //(unsigned char*) casting my pointer(array) as a char 
              // printf("time end data save %lu\r\n",get_ticker_time());
              // printf("SD card 2 returned %i\r\n",result);
               P7OUT^=BIT2;

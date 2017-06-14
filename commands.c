@@ -53,6 +53,8 @@ int example_command(char **argv,unsigned short argc){
 }
 
 
+
+
 /*********************************************************** Using the Timer_A1 ***************************************************************
 * DONT USE TIMER0_Ax_VECTOR !!! this interrupt is use in library code and will cause a collision 
 * Use TIMERx_Ay_VECTOR x=2,3 & y=0,1
@@ -659,6 +661,7 @@ int SDaddrcmd(char **argv,unsigned short argc){
 SDaddrhigh=SDaddr>>16; 
 SDaddrlow=SDaddr; 
 printf("SDhigh=%i, SDlow=%i\r\n",SDaddrhigh,SDaddrlow); 
+printf("SD_ADDRESS="LONG_STR"\r\n",SDaddr);
 printf("SD_ADDRESS=%lu\r\n",SDaddr);
 }
 
